@@ -60,6 +60,7 @@
 <script setup>
 import { ref } from 'vue'
 import { 
+  signInWithPopup, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signInWithPopup, 
@@ -75,6 +76,20 @@ const isLoading = ref(false)
 const showNameModal = ref(false)
 const userName = ref('')
 const pendingUser = ref(null) // Сохраняем пользователя до ввода имени
+
+// Обработка результата после redirect
+import { getRedirectResult } from 'firebase/auth'
+
+onMounted(async () => {
+  try {
+    const result = await getRedirectResult(auth)
+    if (result) {
+      console.log('✅ Вход через redirect успешен')
+    }
+  } catch (error) {
+    errorMessage.value = getAuthErrorMessage(error.code)
+  }
+})
 
 const handleEmailAuth = async (action) => {
   errorMessage.value = ''
@@ -98,13 +113,20 @@ const handleEmailAuth = async (action) => {
 const handleGoogleAuth = async () => {
   errorMessage.value = ''
   isLoading.value = true
+  
   try {
     const provider = new GoogleAuthProvider()
-    await signInWithPopup(auth, provider)
-    // Для Google имя берётся автоматически из профиля
+    
+    // Пробуем сначала popup (для десктопа)
+    try {
+      await signInWithPopup(auth, provider)
+    } catch (popupError) {
+      // Если popup заблокирован, используем redirect (для мобильных)
+      console.log('Popup заблокирован, используем redirect')
+      await signInWithRedirect(auth, provider)
+    }
   } catch (error) {
     errorMessage.value = getAuthErrorMessage(error.code)
-  } finally {
     isLoading.value = false
   }
 }
