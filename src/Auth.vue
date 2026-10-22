@@ -60,12 +60,13 @@
 <script setup>
 import { ref } from 'vue'
 import { 
-  signInWithPopup, 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
   signInWithPopup, 
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
-  updateProfile
+  updateProfile 
 } from 'firebase/auth'
 import { auth } from './firebase'
 
@@ -162,4 +163,17 @@ function getAuthErrorMessage(code) {
     default: return 'Произошла ошибка. Проверьте данные и попробуйте снова.'
   }
 }
+import { onMounted } from 'vue'
+
+onMounted(async () => {
+  try {
+    const result = await getRedirectResult(auth)
+    if (result) {
+      console.log('✅ Вход через redirect успешен')
+    }
+  } catch (error) {
+    errorMessage.value = getAuthErrorMessage(error.code)
+  }
+})
+
 </script>
