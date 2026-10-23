@@ -67,7 +67,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -80,6 +80,9 @@ import {
 } from 'firebase/auth'
 import { auth } from './firebase'
 
+const props = defineProps({
+  askName: { type: Boolean, default: false }
+})
 const emit = defineEmits(['profile-updated'])
 
 const email = ref('')
@@ -93,10 +96,23 @@ const pendingUser = ref(null)
 const POPUP_FALLBACK_CODES = ['auth/popup-blocked', 'auth/cancelled-popup-request']
 
 function askForNameIfNeeded(firebaseUser) {
-  if (!firebaseUser || firebaseUser.displayName?.trim()) return
+  if (!firebaseUser) return
+  const existingName = firebaseUser?.displayName
+  if (existingName) {
+    emit('profile-updated', existingName)
+    return
+  }
   pendingUser.value = firebaseUser
   showNameModal.value = true
 }
+
+watch(
+  () => props.askName,
+  (needName) => {
+    if (needName) askForNameIfNeeded(auth.currentUser)
+  },
+  { immediate: true }
+)
 
 onAuthStateChanged(auth, (firebaseUser) => {
   askForNameIfNeeded(firebaseUser)
@@ -182,7 +198,8 @@ function getAuthErrorMessage(code) {
     case 'auth/wrong-password': return 'Неверный пароль'
     case 'auth/invalid-credential':
     case 'auth/invalid-login-credentials': return 'Неверный email или пароль'
-    case 'auth/email-already-in-use': return 'Этот email уже зарегистрирован'
+    case 'auth/email-already-in-use': return 'Этот email уже зарегистрирован. Нажмите «Войти» или войдите через Google — тот способ, которым регистрировались.'
+    case 'auth/account-exists-with-different-credential': return 'Этот email уже используется с другим способом входа. Войдите через email и пароль или через Google — как регистрировались.'
     case 'auth/weak-password': return 'Пароль должен быть не менее 6 символов'
     case 'auth/too-many-requests': return 'Слишком много попыток. Подождите немного и попробуйте снова.'
     case 'auth/network-request-failed': return 'Нет соединения. Проверьте интернет и попробуйте снова.'
