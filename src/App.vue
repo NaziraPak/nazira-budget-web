@@ -1,8 +1,8 @@
 <template>
-  <!-- Экран входа (нет сессии или ещё не задано имя) -->
-  <Auth v-if="!user || !displayName" :ask-name="!!user && !displayName" @profile-updated="onProfileUpdated" />
+  <!-- Экран входа (если пользователь не вошёл) -->
+  <Auth v-if="!user" />
 
-  <!-- Основное приложение (есть сессия и имя) -->
+  <!-- Основное приложение (если пользователь вошёл) -->
   <div v-else class="min-h-screen bg-bgPrimary p-6">
     <!-- Приветствие и кнопка выхода -->
     <div class="flex justify-between items-center mb-8">
@@ -68,8 +68,7 @@
       <span>+</span> Добавить транзакцию
     </button>
 
-    <!-- ================= МОДАЛЬНЫЕ ОКНА (Транзакции, Категории, Цели, Кошельки, Меню) ================= -->
-    <!-- (Для экономии места я оставил структуру модалок такой же, как в прошлом коде, но с добавлением userId в логику) -->
+    <!-- ================= МОДАЛЬНЫЕ ОКНА ================= -->
     
     <!-- Модальное окно добавления/редактирования транзакции -->
     <div v-if="showAddModal" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
@@ -152,7 +151,7 @@
             </div>
             <div class="flex gap-3">
               <button @click="openTopUpGoal(goal)" class="flex-1 py-3 rounded-xl font-bold bg-accentLilac text-white text-sm">Пополнить</button>
-              <button @click="deleteGoal(goal.id)" class="w-12 py-3 rounded-xl font-bold bg-red-100 text-red-500 text-sm flex items-center justify-center">🗑</button>
+              <button @click="deleteGoal(goal.id)" class="w-12 py-3 rounded-xl font-bold bg-red-100 text-red-500 text-sm flex items-center justify-center"></button>
             </div>
           </div>
         </div>
@@ -269,19 +268,14 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
 import { 
   collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, deleteDoc, query, orderBy, where 
 } from 'firebase/firestore'
-import { auth, resolveDisplayName } from './firebase'
-import { signOut, onAuthStateChanged, updateProfile } from 'firebase/auth'
-import Auth from './Auth.vue' // <-- Импортируем экран входа
+import { auth } from './firebase'  // ✅ ИСПРАВЛЕНО: убран resolveDisplayName
+import { signOut, onAuthStateChanged } from 'firebase/auth'
+import Auth from './Auth.vue'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-const user = ref(null) // <-- Состояние авторизации
-const displayName = ref('')
-const userName = computed(() => displayName.value || 'Пользователь')
-
-function onProfileUpdated(name) {
-  displayName.value = name
-}
+const user = ref(null)
+const userName = computed(() => user.value?.displayName || user.value?.email?.split('@')[0] || 'Пользователь')
 
 // Состояние UI
 const showAddModal = ref(false)
@@ -319,8 +313,8 @@ const currentGoal = ref(null)
 const topUpAmount = ref('')
 const topUpWallet = ref('')
 
-const emojiOptions = ['🛒', '☕️', '🚗', '👗', '💰', '🎁', '🏠', '⛽️', '🍔', '🎙️', '🎮', '🏕️', '✈️', '💊', '💃', '🐾']
-const walletEmojiOptions = ['🅰️', '💵', '🏦', '💰', '👛', '💎']
+const emojiOptions = ['', '☕️', '🚗', '👗', '💰', '', '🏠', '⛽️', '🍔', '🎙️', '🎮', '🏕️', '✈️', '💊', '💃', '🐾']
+const walletEmojiOptions = ['🅰️', '💵', '', '💰', '👛', '💎']
 const colorOptions = ['F4E1E6', 'fadadd', 'D4E7F7', 'E8C4D0', 'D9A8BA', 'E8D5E0', 'D4B8C8', 'C4B5D4', 'B5A5C8', 'B8C8D8', 'A5B8CC', 'A8C8C8', '95B8B8', 'B0B8C0']
 
 function getCategoryEmoji(name) {
@@ -422,7 +416,7 @@ const topUpGoal = async () => {
     showTopUpGoal.value = false
     currentGoal.value = null
     topUpAmount.value = ''
-  } catch (error) { console.error('❌ Ошибка пополнения:', error) }
+  } catch (error) { console.error(' Ошибка пополнения:', error) }
 }
 
 const createGoal = async () => {
@@ -441,16 +435,12 @@ const deleteGoal = async (id) => {
 }
 // ================================================
 
-// Отслеживание состояния авторизации и загрузка данных ТОЛЬКО для текущего пользователя
+// Отслеживание состояния авторизации
 onMounted(() => {
-  console.log('🚀 App.vue смонтирован, начинаем слушать auth...')
-  
   onAuthStateChanged(auth, (currentUser) => {
-    console.log('🔔 onAuthStateChanged вызван:', currentUser ? currentUser.email : 'null')
     user.value = currentUser
     
     if (currentUser) {
-      console.log('✅ Пользователь вошёл:', currentUser.email)
       const uid = currentUser.uid
       
       onSnapshot(query(collection(db, 'categories'), where('userId', '==', uid)), (snapshot) => {
@@ -471,7 +461,6 @@ onMounted(() => {
         transactions.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       })
     } else {
-      console.log('❌ Пользователь не вошёл, очищаем данные')
       transactions.value = []
       categories.value = []
       wallets.value = []
@@ -488,7 +477,7 @@ const saveTransaction = async () => {
     categoryName: newCategory.value,
     walletName: newWallet.value,
     type: newType.value,
-    userId: user.value.uid, // <-- ВАЖНО: привязываем к пользователю
+    userId: user.value.uid,
     ...(editingTransactionId.value ? {} : { date: serverTimestamp() })
   }
 
@@ -499,7 +488,7 @@ const saveTransaction = async () => {
       await addDoc(collection(db, 'transactions'), transactionData)
     }
     closeModal()
-  } catch (error) { console.error('❌ Ошибка:', error); alert('Ошибка при сохранении.') }
+  } catch (error) { console.error(' Ошибка:', error); alert('Ошибка при сохранении.') }
 }
 
 const createCategory = async () => {
@@ -524,6 +513,6 @@ const createWallet = async () => {
 
 const deleteTransaction = async (id) => {
   if (!confirm('Удалить эту транзакцию?')) return
-  try { await deleteDoc(doc(db, 'transactions', id)) } catch (error) { console.error('❌ Ошибка удаления:', error) }
+  try { await deleteDoc(doc(db, 'transactions', id)) } catch (error) { console.error(' Ошибка удаления:', error) }
 }
 </script>

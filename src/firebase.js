@@ -17,4 +17,12 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app); // <-- Экспортируем объект auth
 
+export function resolveDisplayName(firebaseUser) {
+  if (!firebaseUser) return ''
+  const fromProfile = firebaseUser.displayName?.trim()
+  if (fromProfile) return fromProfile
+  const fromProvider = firebaseUser.providerData?.find((profile) => profile.displayName?.trim())?.displayName?.trim()
+  return fromProvider || ''
+}
+
 console.log("✅ Firebase (DB + Auth) успешно подключен!");
