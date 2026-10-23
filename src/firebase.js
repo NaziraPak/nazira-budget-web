@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // <-- Добавили авторизацию
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBbYw5GBeSI2Ws39EfOZ5montORU_2ciRk",
@@ -13,16 +13,12 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Инициализируем базу данных и авторизацию
-export const db = getFirestore(app);
-export const auth = getAuth(app); // <-- Экспортируем объект auth
+// Инициализируем базу данных с настройками для Safari
+export const db = getFirestore(app, {
+  experimentalAutoDetectLongPolling: true, // <-- ВАЖНО: обходит блокировку Safari
+  experimentalForceLongPolling: false
+});
 
-export function resolveDisplayName(firebaseUser) {
-  if (!firebaseUser) return ''
-  const fromProfile = firebaseUser.displayName?.trim()
-  if (fromProfile) return fromProfile
-  const fromProvider = firebaseUser.providerData?.find((profile) => profile.displayName?.trim())?.displayName?.trim()
-  return fromProvider || ''
-}
+export const auth = getAuth(app);
 
 console.log("✅ Firebase (DB + Auth) успешно подключен!");
