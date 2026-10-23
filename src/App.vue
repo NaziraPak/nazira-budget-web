@@ -268,7 +268,7 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
 import { 
   collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, deleteDoc, query, orderBy, where 
 } from 'firebase/firestore'
-import { auth } from './firebase'  // ✅ ИСПРАВЛЕНО: убран resolveDisplayName
+import { auth, db } from './firebase' 
 import { signOut, onAuthStateChanged } from 'firebase/auth'
 import Auth from './Auth.vue'
 
