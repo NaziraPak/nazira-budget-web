@@ -1,17 +1,37 @@
 <template>
   <div class="min-h-screen bg-bgPrimary flex items-center justify-center p-6">
-    <div class="bg-cardSurface w-full max-w-md rounded-3xl p-8 shadow-2xl">
+    <div v-if="showNameModal" class="bg-cardSurface w-full max-w-md rounded-3xl p-8 shadow-2xl">
+      <h3 class="text-xl font-bold text-textPrimary mb-4">Как вас зовут?</h3>
+      <p class="text-sm text-textSecondary mb-4">Это имя будет отображаться в приложении</p>
+      <div v-if="errorMessage" class="bg-red-100 text-red-600 p-3 rounded-xl mb-4 text-sm text-center">
+        {{ errorMessage }}
+      </div>
+      <input
+        v-model="userName"
+        type="text"
+        placeholder="Ваше имя"
+        class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac mb-4"
+        @keyup.enter="saveUserName"
+      >
+      <button
+        @click="saveUserName"
+        :disabled="!userName.trim()"
+        class="w-full bg-accentLilac text-white font-bold py-4 rounded-2xl disabled:opacity-50"
+      >
+        Продолжить
+      </button>
+    </div>
+
+    <div v-else class="bg-cardSurface w-full max-w-md rounded-3xl p-8 shadow-2xl">
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-textPrimary mb-2">Учёт финансов 🐹</h1>
         <p class="text-textSecondary">Войдите, чтобы управлять бюджетом</p>
       </div>
 
-      <!-- Ошибка -->
       <div v-if="errorMessage" class="bg-red-100 text-red-600 p-3 rounded-xl mb-4 text-sm text-center">
         {{ errorMessage }}
       </div>
 
-      <!-- Форма -->
       <div class="space-y-4">
         <div>
           <label class="block text-sm text-textSecondary mb-1">Email</label>
@@ -37,17 +57,6 @@
       </div>
     </div>
 
-    <!-- Модалка ввода имени (для email-регистрации) -->
-    <div v-if="showNameModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-6">
-      <div class="bg-cardSurface w-full max-w-md rounded-3xl p-6 shadow-2xl">
-        <h3 class="text-xl font-bold text-textPrimary mb-4">Как вас зовут?</h3>
-        <p class="text-sm text-textSecondary mb-4">Это имя будет отображаться в приложении</p>
-        <input v-model="userName" type="text" placeholder="Ваше имя" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac mb-4">
-        <button @click="saveUserName" :disabled="!userName" class="w-full bg-accentLilac text-white font-bold py-4 rounded-2xl disabled:opacity-50">Продолжить</button>
-      </div>
-    </div>
-
-    <!-- Загрузка -->
     <div v-if="isLoading" class="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
       <div class="bg-white p-6 rounded-2xl shadow-xl flex items-center gap-3">
         <div class="w-6 h-6 border-4 border-accentLilac border-t-transparent rounded-full animate-spin"></div>
@@ -58,7 +67,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
@@ -66,9 +75,12 @@ import {
   signInWithRedirect,
   getRedirectResult,
   GoogleAuthProvider,
-  updateProfile 
+  updateProfile,
+  onAuthStateChanged
 } from 'firebase/auth'
 import { auth } from './firebase'
+
+const emit = defineEmits(['profile-updated'])
 
 const email = ref('')
 const password = ref('')
@@ -76,33 +88,41 @@ const errorMessage = ref('')
 const isLoading = ref(false)
 const showNameModal = ref(false)
 const userName = ref('')
-const pendingUser = ref(null) // Сохраняем пользователя до ввода имени
+const pendingUser = ref(null)
 
-// Обработка результата после redirect
-import { getRedirectResult } from 'firebase/auth'
+const POPUP_FALLBACK_CODES = ['auth/popup-blocked', 'auth/cancelled-popup-request']
 
-onMounted(async () => {
-  try {
-    const result = await getRedirectResult(auth)
-    if (result) {
-      console.log('✅ Вход через redirect успешен')
-    }
-  } catch (error) {
-    errorMessage.value = getAuthErrorMessage(error.code)
-  }
+function askForNameIfNeeded(firebaseUser) {
+  if (!firebaseUser || firebaseUser.displayName?.trim()) return
+  pendingUser.value = firebaseUser
+  showNameModal.value = true
+}
+
+onAuthStateChanged(auth, (firebaseUser) => {
+  askForNameIfNeeded(firebaseUser)
 })
 
 const handleEmailAuth = async (action) => {
+  const trimmedEmail = email.value.trim()
   errorMessage.value = ''
+
+  if (!trimmedEmail || !password.value) {
+    errorMessage.value = 'Введите email и пароль'
+    return
+  }
+  if (password.value.length < 6) {
+    errorMessage.value = 'Пароль должен быть не менее 6 символов'
+    return
+  }
+
   isLoading.value = true
   try {
     if (action === 'login') {
-      await signInWithEmailAndPassword(auth, email.value, password.value)
+      const userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, password.value)
+      askForNameIfNeeded(userCredential.user)
     } else {
-      const userCredential = await createUserWithEmailAndPassword(auth, email.value, password.value)
-      // Для email-регистрации показываем модалку ввода имени
-      pendingUser.value = userCredential.user
-      showNameModal.value = true
+      const userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, password.value)
+      askForNameIfNeeded(userCredential.user)
     }
   } catch (error) {
     errorMessage.value = getAuthErrorMessage(error.code)
@@ -114,32 +134,35 @@ const handleEmailAuth = async (action) => {
 const handleGoogleAuth = async () => {
   errorMessage.value = ''
   isLoading.value = true
-  
+  const provider = new GoogleAuthProvider()
+  let redirected = false
+
   try {
-    const provider = new GoogleAuthProvider()
-    
-    // Пробуем сначала popup (для десктопа)
     try {
-      await signInWithPopup(auth, provider)
+      const credential = await signInWithPopup(auth, provider)
+      askForNameIfNeeded(credential.user)
     } catch (popupError) {
-      // Если popup заблокирован, используем redirect (для мобильных)
-      console.log('Popup заблокирован, используем redirect')
+      if (!POPUP_FALLBACK_CODES.includes(popupError.code)) {
+        throw popupError
+      }
+      redirected = true
       await signInWithRedirect(auth, provider)
     }
   } catch (error) {
     errorMessage.value = getAuthErrorMessage(error.code)
-    isLoading.value = false
+  } finally {
+    if (!redirected) isLoading.value = false
   }
 }
 
 const saveUserName = async () => {
-  if (!userName.value || !pendingUser.value) return
+  const name = userName.value.trim()
+  if (!name || !pendingUser.value) return
   isLoading.value = true
   try {
-    // Сохраняем имя в Firebase Auth
-    await updateProfile(pendingUser.value, {
-      displayName: userName.value
-    })
+    await updateProfile(pendingUser.value, { displayName: name })
+    await pendingUser.value.reload()
+    emit('profile-updated', name)
     showNameModal.value = false
     pendingUser.value = null
     userName.value = ''
@@ -157,23 +180,29 @@ function getAuthErrorMessage(code) {
     case 'auth/user-disabled': return 'Этот аккаунт отключен'
     case 'auth/user-not-found': return 'Пользователь не найден. Проверьте email или зарегистрируйтесь.'
     case 'auth/wrong-password': return 'Неверный пароль'
+    case 'auth/invalid-credential':
+    case 'auth/invalid-login-credentials': return 'Неверный email или пароль'
     case 'auth/email-already-in-use': return 'Этот email уже зарегистрирован'
     case 'auth/weak-password': return 'Пароль должен быть не менее 6 символов'
+    case 'auth/too-many-requests': return 'Слишком много попыток. Подождите немного и попробуйте снова.'
+    case 'auth/network-request-failed': return 'Нет соединения. Проверьте интернет и попробуйте снова.'
     case 'auth/popup-closed-by-user': return 'Окно входа было закрыто'
+    case 'auth/popup-blocked': return 'Браузер заблокировал окно входа. Разрешите всплывающие окна и попробуйте снова.'
     default: return 'Произошла ошибка. Проверьте данные и попробуйте снова.'
   }
 }
-import { onMounted } from 'vue'
 
 onMounted(async () => {
   try {
     const result = await getRedirectResult(auth)
     if (result) {
-      console.log('✅ Вход через redirect успешен')
+      askForNameIfNeeded(result.user)
+      return
     }
   } catch (error) {
     errorMessage.value = getAuthErrorMessage(error.code)
   }
-})
 
+  askForNameIfNeeded(auth.currentUser)
+})
 </script>

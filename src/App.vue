@@ -1,8 +1,8 @@
 <template>
-  <!-- Экран входа (показывается, если пользователь НЕ авторизован) -->
-  <Auth v-if="!user" />
+  <!-- Экран входа (нет сессии или ещё не задано имя) -->
+  <Auth v-if="!user || !displayName" @profile-updated="onProfileUpdated" />
 
-  <!-- Основное приложение (показывается, если пользователь авторизован) -->
+  <!-- Основное приложение (есть сессия и имя) -->
   <div v-else class="min-h-screen bg-bgPrimary p-6">
     <!-- Приветствие и кнопка выхода -->
     <div class="flex justify-between items-center mb-8">
@@ -276,7 +276,12 @@ import Auth from './Auth.vue' // <-- Импортируем экран вход�
 ChartJS.register(ArcElement, Tooltip, Legend)
 
 const user = ref(null) // <-- Состояние авторизации
-const userName = computed(() => user.value?.displayName || 'Пользователь')
+const displayName = ref('')
+const userName = computed(() => displayName.value || 'Пользователь')
+
+function onProfileUpdated(name) {
+  displayName.value = name
+}
 
 // Состояние UI
 const showAddModal = ref(false)
@@ -440,6 +445,7 @@ const deleteGoal = async (id) => {
 onMounted(() => {
   onAuthStateChanged(auth, (currentUser) => {
     user.value = currentUser
+    displayName.value = currentUser?.displayName || ''
     
     if (currentUser) {
       const uid = currentUser.uid
