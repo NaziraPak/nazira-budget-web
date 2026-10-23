@@ -1,6 +1,6 @@
 <template>
   <!-- Экран входа (нет сессии или ещё не задано имя) -->
-  <Auth v-if="!user || !displayName" @profile-updated="onProfileUpdated" />
+  <Auth v-if="!user || !displayName" :ask-name="!!user && !displayName" @profile-updated="onProfileUpdated" />
 
   <!-- Основное приложение (есть сессия и имя) -->
   <div v-else class="min-h-screen bg-bgPrimary p-6">
@@ -269,8 +269,8 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
 import { 
   collection, addDoc, updateDoc, doc, serverTimestamp, onSnapshot, deleteDoc, query, orderBy, where 
 } from 'firebase/firestore'
-import { auth } from './firebase'
-import { signOut, onAuthStateChanged } from 'firebase/auth'
+import { auth, resolveDisplayName } from './firebase'
+import { signOut, onAuthStateChanged, updateProfile } from 'firebase/auth'
 import Auth from './Auth.vue' // <-- Импортируем экран входа
 
 ChartJS.register(ArcElement, Tooltip, Legend)
@@ -443,14 +443,16 @@ const deleteGoal = async (id) => {
 
 // Отслеживание состояния авторизации и загрузка данных ТОЛЬКО для текущего пользователя
 onMounted(() => {
+  console.log('🚀 App.vue смонтирован, начинаем слушать auth...')
+  
   onAuthStateChanged(auth, (currentUser) => {
+    console.log('🔔 onAuthStateChanged вызван:', currentUser ? currentUser.email : 'null')
     user.value = currentUser
-    displayName.value = currentUser?.displayName || ''
     
     if (currentUser) {
+      console.log('✅ Пользователь вошёл:', currentUser.email)
       const uid = currentUser.uid
       
-      // Загружаем только данные этого пользователя
       onSnapshot(query(collection(db, 'categories'), where('userId', '==', uid)), (snapshot) => {
         categories.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       })
@@ -469,8 +471,11 @@ onMounted(() => {
         transactions.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       })
     } else {
-      // Если пользователь вышел, очищаем данные
-      transactions.value = []; categories.value = []; wallets.value = []; goals.value = []
+      console.log('❌ Пользователь не вошёл, очищаем данные')
+      transactions.value = []
+      categories.value = []
+      wallets.value = []
+      goals.value = []
     }
   })
 })
