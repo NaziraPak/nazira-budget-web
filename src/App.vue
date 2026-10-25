@@ -470,7 +470,10 @@ onMounted(() => {
 })
 
 const saveTransaction = async () => {
-  if (!newAmount.value || newAmount.value <= 0 || !newCategory.value || !newWallet.value || !user.value) return
+  if (!newAmount.value || newAmount.value <= 0 || !newCategory.value || !newWallet.value || !user.value) {
+    console.log('❌ Не все поля заполнены:', { newAmount: newAmount.value, newCategory: newCategory.value, newWallet: newWallet.value, user: user.value })
+    return
+  }
 
   const transactionData = {
     amount: Number(newAmount.value),
@@ -481,14 +484,21 @@ const saveTransaction = async () => {
     ...(editingTransactionId.value ? {} : { date: serverTimestamp() })
   }
 
+  console.log('💾 Пытаемся сохранить транзакцию:', transactionData)
+
   try {
     if (editingTransactionId.value) {
       await updateDoc(doc(db, 'transactions', editingTransactionId.value), transactionData)
+      console.log('✅ Транзакция обновлена')
     } else {
-      await addDoc(collection(db, 'transactions'), transactionData)
+      const docRef = await addDoc(collection(db, 'transactions'), transactionData)
+      console.log('✅ Транзакция сохранена с ID:', docRef.id)
     }
     closeModal()
-  } catch (error) { console.error(' Ошибка:', error); alert('Ошибка при сохранении.') }
+  } catch (error) { 
+    console.error('❌ Ошибка сохранения:', error)
+    alert('Ошибка при сохранении: ' + error.message)
+  }
 }
 
 const createCategory = async () => {
