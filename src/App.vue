@@ -456,7 +456,7 @@ onMounted(() => {
         goals.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       })
 
-      const q = query(collection(db, 'transactions'), where('userId', '==', uid), orderBy('date', 'desc'))
+      const q = query(collection(db, 'transactions'), where('userId', '==', uid))
       onSnapshot(q, (snapshot) => {
         transactions.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       })
