@@ -470,8 +470,14 @@ onMounted(() => {
 })
 
 const saveTransaction = async () => {
+  console.log('🔍 Начало saveTransaction')
+  console.log(' user.value:', user.value)
+  console.log('🔍 newAmount:', newAmount.value)
+  console.log('🔍 newCategory:', newCategory.value)
+  console.log('🔍 newWallet:', newWallet.value)
+  
   if (!newAmount.value || newAmount.value <= 0 || !newCategory.value || !newWallet.value || !user.value) {
-    console.log('❌ Не все поля заполнены:', { newAmount: newAmount.value, newCategory: newCategory.value, newWallet: newWallet.value, user: user.value })
+    console.log('❌ Не все поля заполнены')
     return
   }
 
@@ -481,22 +487,21 @@ const saveTransaction = async () => {
     walletName: newWallet.value,
     type: newType.value,
     userId: user.value.uid,
-    ...(editingTransactionId.value ? {} : { date: serverTimestamp() })
+    date: new Date() // <-- Используем обычную дату вместо serverTimestamp
   }
 
-  console.log('💾 Пытаемся сохранить транзакцию:', transactionData)
+  console.log('💾 Данные для сохранения:', transactionData)
 
   try {
-    if (editingTransactionId.value) {
-      await updateDoc(doc(db, 'transactions', editingTransactionId.value), transactionData)
-      console.log('✅ Транзакция обновлена')
-    } else {
-      const docRef = await addDoc(collection(db, 'transactions'), transactionData)
-      console.log('✅ Транзакция сохранена с ID:', docRef.id)
-    }
+    console.log(' Вызываем addDoc...')
+    const docRef = await addDoc(collection(db, 'transactions'), transactionData)
+    console.log('✅ Транзакция сохранена с ID:', docRef.id)
+    console.log('✅ Закрываем модалку')
     closeModal()
   } catch (error) { 
     console.error('❌ Ошибка сохранения:', error)
+    console.error('❌ Код ошибки:', error.code)
+    console.error('❌ Сообщение:', error.message)
     alert('Ошибка при сохранении: ' + error.message)
   }
 }
