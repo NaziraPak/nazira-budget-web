@@ -13,10 +13,8 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-// Инициализируем базу данных с настройками для Safari
 export const db = getFirestore(app, {
-  experimentalAutoDetectLongPolling: true, // <-- ВАЖНО: обходит блокировку Safari
-  experimentalForceLongPolling: false
+  experimentalForceLongPolling: true  // <-- Принудительный режим, работает везде
 });
 
 export const auth = getAuth(app);
