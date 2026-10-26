@@ -315,7 +315,7 @@ const topUpWallet = ref('')
 
 const emojiOptions = ['🛒', '☕️', '🚗', '👗', '💰', '👦🏻', '🏠', '⛽️', '🍔', '🎙️', '🎮', '🏕️', '✈️', '💊', '💃', '🐾', '↔']
 const walletEmojiOptions = ['🅰️', '💵', '', '💰', '👛', '💎']
-const colorOptions = ['F4E1E6', 'fadadd', 'D9A8BA', 'C4B5D4', 'B8C8D8', 'A8C8C8', C8B8D4', 'B8D4E8', 'F4B896', 'F5E6E8', 'F5E6C8', 'E5EFE2', 'FADADD', 'C8D8E8', 'D4A8A8', 'F0E6D2', 'D4E8E0', 'A89888', '88C4C0', 'A8C8E0', 'A86878', '1E3A5F', '6B5868', 'B8A898', '4A88C0', 'F0B8C0']
+const colorOptions = ['F4E1E6', 'D9A8BA', 'C4B5D4', 'B8C8D8', 'A8C8C8', 'C8B8D4', 'B8D4E8', 'F4B896', 'F5E6E8', 'F5E6C8', 'E5EFE2', 'FADADD', 'C8D8E8', 'D4A8A8', 'F0E6D2', 'D4E8E0', 'A89888', '88C4C0', 'A8C8E0', 'A86878', '1E3A5F', '6B5868', 'B8A898', '4A88C0', 'F0B8C0']
 
 function getCategoryEmoji(name) {
   const cat = categories.value.find(c => c.name === name)
