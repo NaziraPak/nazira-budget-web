@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
+import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
@@ -13,10 +13,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 
-export const db = getFirestore(app, {
-  experimentalForceLongPolling: true  // <-- Принудительный режим, работает везде
-});
-
+export const db = getFirestore(app); // <-- Без дополнительных настроек
 export const auth = getAuth(app);
 
-console.log("✅ Firebase (DB + Auth) успешно подключен!");
+console.log("✅ Firebase подключен!");
