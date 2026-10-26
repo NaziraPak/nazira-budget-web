@@ -313,9 +313,9 @@ const currentGoal = ref(null)
 const topUpAmount = ref('')
 const topUpWallet = ref('')
 
-const emojiOptions = ['', '☕️', '🚗', '👗', '💰', '', '🏠', '⛽️', '🍔', '🎙️', '🎮', '🏕️', '✈️', '💊', '💃', '🐾']
+const emojiOptions = ['🛒', '☕️', '🚗', '👗', '💰', '👦🏻', '🏠', '⛽️', '🍔', '🎙️', '🎮', '🏕️', '✈️', '💊', '💃', '🐾', '↔']
 const walletEmojiOptions = ['🅰️', '💵', '', '💰', '👛', '💎']
-const colorOptions = ['F4E1E6', 'fadadd', 'D4E7F7', 'E8C4D0', 'D9A8BA', 'E8D5E0', 'D4B8C8', 'C4B5D4', 'B5A5C8', 'B8C8D8', 'A5B8CC', 'A8C8C8', '95B8B8', 'B0B8C0']
+const colorOptions = ['F4E1E6', 'fadadd', 'D9A8BA', 'C4B5D4', 'B8C8D8', 'A8C8C8', C8B8D4', 'B8D4E8', 'F4B896', 'F5E6E8', 'F5E6C8', 'E5EFE2', 'FADADD', 'C8D8E8', 'D4A8A8', 'F0E6D2', 'D4E8E0', 'A89888', '88C4C0', 'A8C8E0', 'A86878', '1E3A5F', '6B5868', 'B8A898', '4A88C0', 'F0B8C0']
 
 function getCategoryEmoji(name) {
   const cat = categories.value.find(c => c.name === name)
@@ -470,12 +470,7 @@ onMounted(() => {
 })
 
 const saveTransaction = async () => {
-  console.log(' Начало saveTransaction')
-  
-  if (!newAmount.value || newAmount.value <= 0 || !newCategory.value || !newWallet.value || !user.value) {
-    console.log('❌ Не все поля заполнены')
-    return
-  }
+  if (!newAmount.value || newAmount.value <= 0 || !newCategory.value || !newWallet.value || !user.value) return
 
   const transactionData = {
     amount: Number(newAmount.value),
@@ -486,24 +481,16 @@ const saveTransaction = async () => {
     date: new Date()
   }
 
-  console.log('💾 Данные:', transactionData)
-
   try {
-    console.log('⏳ Вызываем addDoc с таймаутом 10 секунд...')
-    
-    const savePromise = addDoc(collection(db, 'transactions'), transactionData)
-    
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Таймаут: addDoc завис на 10 секунд')), 10000)
-    })
-    
-    const docRef = await Promise.race([savePromise, timeoutPromise])
-    
-    console.log('✅ Транзакция сохранена с ID:', docRef.id)
+    if (editingTransactionId.value) {
+      await updateDoc(doc(db, 'transactions', editingTransactionId.value), transactionData)
+    } else {
+      await addDoc(collection(db, 'transactions'), transactionData)
+    }
     closeModal()
   } catch (error) { 
-    console.error('❌ Ошибка:', error.message)
-    alert('Ошибка: ' + error.message)
+    console.error('Ошибка сохранения:', error)
+    alert('Ошибка при сохранении: ' + error.message)
   }
 }
 
