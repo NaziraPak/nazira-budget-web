@@ -45,22 +45,24 @@
       <div v-if="transactions.length === 0" class="text-center py-8 text-textSecondary">Пока нет транзакций. Добавь первую!</div>
       <div v-else class="space-y-3">
         <div v-for="t in transactions" :key="t.id" class="flex items-center justify-between p-3 bg-bgPrimary rounded-2xl">
-          <div class="flex items-center gap-3">
-            <span class="text-2xl">{{ getCategoryEmoji(t.categoryName) }}</span>
-            <div>
-              <p class="font-semibold text-textPrimary">{{ t.categoryName || 'Без категории' }}</p>
-              <p class="text-xs text-textSecondary">{{ formatDate(t.date) }}</p>
-              <p v-if="t.walletName" class="text-xs text-textSecondary">{{ t.walletName }}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="font-bold" :class="t.type === 'income' ? 'text-incomeGreen' : 'text-accentLilac'">
-              {{ t.type === 'income' ? '+' : '-' }}{{ t.amount }} ₽
-            </span>
-            <button @click="openEditModal(t)" class="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-sm">✏️</button>
-            <button @click="deleteTransaction(t.id)" class="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center text-red-500 text-sm">✕</button>
-          </div>
-        </div>
+  <div class="flex items-center gap-3">
+    <span class="text-2xl">{{ t.type === 'transfer' ? '↔️' : getCategoryEmoji(t.categoryName) }}</span>
+    <div>
+      <p class="font-semibold text-textPrimary">
+        {{ t.type === 'transfer' ? `Перевод на ${t.transferTo}` : (t.categoryName || 'Без категории') }}
+      </p>
+      <p class="text-xs text-textSecondary">{{ formatDate(t.date) }}</p>
+      <p v-if="t.walletName" class="text-xs text-textSecondary">{{ t.walletName }}</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <span class="font-bold" :class="t.type === 'income' ? 'text-incomeGreen' : t.type === 'transfer' ? 'text-blue-500' : 'text-accentLilac'">
+      {{ t.type === 'income' ? '+' : t.type === 'transfer' ? '→' : '-' }}{{ t.amount }} ₽
+    </span>
+    <button v-if="t.type !== 'transfer'" @click="openEditModal(t)" class="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-sm">✏️</button>
+    <button v-if="t.type !== 'transfer'" @click="deleteTransaction(t.id)" class="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center text-red-500 text-sm">✕</button>
+  </div>
+</div>
       </div>
     </div>
 
@@ -78,14 +80,16 @@
           <button @click="closeModal" class="text-textSecondary text-2xl">&times;</button>
         </div>
         <div class="flex gap-2 mb-6">
-          <button @click="setType('expense')" :class="newType === 'expense' ? 'bg-accentLilac text-white' : 'bg-bgPrimary text-textPrimary'" class="flex-1 py-3 rounded-2xl font-bold transition">Расход</button>
-          <button @click="setType('income')" :class="newType === 'income' ? 'bg-incomeGreen text-white' : 'bg-bgPrimary text-textPrimary'" class="flex-1 py-3 rounded-2xl font-bold transition">Доход</button>
-        </div>
+  <button @click="setType('expense')" :class="newType === 'expense' ? 'bg-accentLilac text-white' : 'bg-bgPrimary text-textPrimary'" class="flex-1 py-3 rounded-2xl font-bold transition">Расход</button>
+  <button @click="setType('income')" :class="newType === 'income' ? 'bg-incomeGreen text-white' : 'bg-bgPrimary text-textPrimary'" class="flex-1 py-3 rounded-2xl font-bold transition">Доход</button>
+  <button @click="setType('transfer')" :class="newType === 'transfer' ? 'bg-blue-400 text-white' : 'bg-bgPrimary text-textPrimary'" class="flex-1 py-3 rounded-2xl font-bold transition">Перевод</button>
+</div>
         <div class="mb-6">
-          <label class="block text-sm text-textSecondary mb-1">{{ newType === 'expense' ? 'Сколько потратили?' : 'Сколько получили?' }}</label>
+          <label class="block text-sm text-textSecondary mb-1">
+          {{ newType === 'expense' ? 'Сколько потратили?' : 'Сколько получили?' }}</label>
           <input v-model="newAmount" type="number" placeholder="0" class="w-full text-3xl font-bold text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac">
         </div>
-        <div class="mb-6">
+        <div v-if="newType !== 'transfer'" class="mb-6">
           <label class="block text-sm text-textSecondary mb-2">Кошелек</label>
           <div class="flex gap-3 overflow-x-auto pb-2">
             <button v-for="wallet in wallets.filter(w => !w.isArchived)" :key="wallet.id" @click="newWallet = wallet.name" :class="newWallet === wallet.name ? 'text-white' : 'text-textPrimary'" :style="{ backgroundColor: newWallet === wallet.name ? `#${wallet.colorHex}` : '#F7F4FA' }" class="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold transition min-w-[120px]">
@@ -93,7 +97,7 @@
             </button>
           </div>
         </div>
-        <div class="mb-6">
+        <div v-if="newType !== 'transfer'" class="mb-6">
           <div class="flex justify-between items-center mb-2">
             <label class="text-sm text-textSecondary">Категория</label>
             <button @click="showAddCategory = true" class="text-sm font-medium text-accentLilac">+ Новая</button>
@@ -104,9 +108,30 @@
             </button>
           </div>
         </div>
-        <button @click="saveTransaction" :disabled="!newAmount || newAmount <= 0 || !newWallet || !newCategory" class="w-full bg-accentLilac text-white font-bold py-4 rounded-2xl mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
-          {{ editingTransactionId ? 'Сохранить изменения' : (newType === 'expense' ? 'Сохранить расход' : 'Сохранить доход') }}
-        </button>
+
+        <!-- Поля для перевода -->
+<div v-if="newType === 'transfer'" class="space-y-4 mb-6">
+  <div>
+    <label class="block text-sm text-textSecondary mb-2">Откуда</label>
+    <div class="flex gap-3 overflow-x-auto pb-2">
+      <button v-for="wallet in wallets.filter(w => !w.isArchived)" :key="wallet.id" @click="transferFrom = wallet.name" :class="transferFrom === wallet.name ? 'text-white' : 'text-textPrimary'" :style="{ backgroundColor: transferFrom === wallet.name ? `#${wallet.colorHex}` : '#F7F4FA' }" class="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold transition min-w-[120px]">
+        <span class="text-xl">{{ wallet.emoji }}</span><span class="text-sm">{{ wallet.name }}</span>
+      </button>
+    </div>
+  </div>
+  <div>
+    <label class="block text-sm text-textSecondary mb-2">Куда</label>
+    <div class="flex gap-3 overflow-x-auto pb-2">
+      <button v-for="wallet in wallets.filter(w => !w.isArchived && w.name !== transferFrom)" :key="wallet.id" @click="transferTo = wallet.name" :class="transferTo === wallet.name ? 'text-white' : 'text-textPrimary'" :style="{ backgroundColor: transferTo === wallet.name ? `#${wallet.colorHex}` : '#F7F4FA' }" class="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold transition min-w-[120px]">
+        <span class="text-xl">{{ wallet.emoji }}</span><span class="text-sm">{{ wallet.name }}</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+        <button @click="saveTransaction" :disabled="!newAmount || newAmount <= 0 || (newType !== 'transfer' && (!newWallet || !newCategory)) || (newType === 'transfer' && (!transferFrom || !transferTo || transferFrom === transferTo))" class="w-full bg-accentLilac text-white font-bold py-4 rounded-2xl mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
+  {{ editingTransactionId ? 'Сохранить изменения' : (newType === 'expense' ? 'Сохранить расход' : newType === 'income' ? 'Сохранить доход' : 'Перевести') }}
+</button>
       </div>
     </div>
 
@@ -296,6 +321,8 @@ const showAddCategory = ref(false)
 const showMenu = ref(false)
 const showWallets = ref(false)
 const showAddWallet = ref(false)
+const transferFrom = ref('')
+const transferTo = ref('')
 const showGoals = ref(false)
 const showAddGoal = ref(false)
 const showTopUpGoal = ref(false)
@@ -348,7 +375,9 @@ function getWalletBalance(walletName) {
   const walletTransactions = transactions.value.filter(t => t.walletName === walletName)
   const income = walletTransactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
   const expense = walletTransactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
-  return wallet.initialBalance + income - expense
+  const transfersOut = walletTransactions.filter(t => t.type === 'transfer').reduce((sum, t) => sum + t.amount, 0)
+  const transfersIn = transactions.value.filter(t => t.type === 'transfer' && t.transferTo === walletName).reduce((sum, t) => sum + t.amount, 0)
+  return wallet.initialBalance + income - expense - transfersOut + transfersIn
 }
 
 const totalIncome = computed(() => transactions.value.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0))
@@ -387,7 +416,14 @@ const chartOptions = {
 
 function setType(type) {
   newType.value = type
-  newCategory.value = type === 'income' ? 'Зарплата' : 'Продукты'
+  if (type === 'income') {
+    newCategory.value = 'Зарплата'
+  } else if (type === 'expense') {
+    newCategory.value = 'Продукты'
+  } else if (type === 'transfer') {
+    transferFrom.value = ''
+    transferTo.value = ''
+  }
 }
 
 function openAddModal() {
@@ -411,6 +447,8 @@ function openEditModal(transaction) {
 function closeModal() {
   showAddModal.value = false
   editingTransactionId.value = null
+  transferFrom.value = ''
+  transferTo.value = ''
 }
 
 function logout() {
@@ -490,6 +528,29 @@ onMounted(() => {
 })
 
 const saveTransaction = async () => {
+  // Для перевода
+  if (newType.value === 'transfer') {
+    if (!newAmount.value || newAmount.value <= 0 || !transferFrom.value || !transferTo.value || transferFrom.value === transferTo.value || !user.value) return
+    
+    try {
+      await addDoc(collection(db, 'transactions'), {
+        amount: Number(newAmount.value),
+        type: 'transfer',
+        walletName: transferFrom.value,
+        transferTo: transferTo.value,
+        categoryName: `Перевод на ${transferTo.value}`,
+        userId: user.value.uid,
+        date: new Date()
+      })
+      closeModal()
+    } catch (error) { 
+      console.error('Ошибка перевода:', error)
+      alert('Ошибка при переводе: ' + error.message)
+    }
+    return
+  }
+
+  // Обычная транзакция
   if (!newAmount.value || newAmount.value <= 0 || !newCategory.value || !newWallet.value || !user.value) return
 
   const transactionData = {
