@@ -251,6 +251,19 @@
           <div><label class="block text-sm text-textSecondary mb-1">Название</label><input v-model="newWalletName" type="text" placeholder="Например, Копилка" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac"></div>
           <div><label class="block text-sm text-textSecondary mb-1">Начальный баланс</label><input v-model="newWalletBalance" type="number" placeholder="0" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac"></div>
           <div><label class="block text-sm text-textSecondary mb-2">Иконка:</label><div class="flex gap-3 overflow-x-auto pb-2"><button v-for="emoji in walletEmojiOptions" :key="emoji" @click="newWalletEmoji = emoji" :class="newWalletEmoji === emoji ? 'bg-accentLilac text-white' : 'bg-bgPrimary text-textPrimary'" class="flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center text-2xl transition">{{ emoji }}</button></div></div>
+         
+          <div class="flex items-center gap-3 mt-4 p-3 bg-bgPrimary rounded-2xl">
+            <input type="checkbox" id="includeInTotal" v-model="includeInTotal" class="w-5 h-5 rounded border-gray-300 text-accentLilac focus:ring-accentLilac">
+            <label for="includeInTotal" class="text-sm text-textPrimary cursor-pointer select-none">
+              Учитывать в общем балансе (остатке)
+            </label>
+          </div>
+
+          <div class="flex gap-3 mt-6">
+            <button @click="showAddWallet = false" class="flex-1 py-3 rounded-2xl font-medium bg-bgPrimary text-textPrimary">Отмена</button>
+            <button @click="createWallet" :disabled="!newWalletName" class="flex-1 py-3 rounded-2xl font-bold bg-accentLilac text-white disabled:opacity-50">Создать</button>
+          </div>
+
           <div class="flex gap-3 mt-6">
             <button @click="showAddWallet = false" class="flex-1 py-3 rounded-2xl font-medium bg-bgPrimary text-textPrimary">Отмена</button>
             <button @click="createWallet" :disabled="!newWalletName" class="flex-1 py-3 rounded-2xl font-bold bg-accentLilac text-white disabled:opacity-50">Создать</button>
@@ -304,6 +317,7 @@ const newCategoryColor = ref('F4E1E6')
 const newWalletName = ref('')
 const newWalletBalance = ref('0')
 const newWalletEmoji = ref('💳')
+const includeInTotal = ref(true) // По умолчанию галочка стоит
 
 const newGoalName = ref('')
 const newGoalTarget = ref('')
@@ -339,7 +353,13 @@ function getWalletBalance(walletName) {
 
 const totalIncome = computed(() => transactions.value.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0))
 const totalExpenses = computed(() => transactions.value.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0))
-const remaining = computed(() => Math.max(0, totalIncome.value - totalExpenses.value))
+const remaining = computed(() => {
+  // Суммируем баланс только тех кошельков, у которых includeInTotal !== false
+  // (условие !== false нужно, чтобы старые кошельки без этого поля по умолчанию учитывались)
+  return wallets.value
+    .filter(w => w.includeInTotal !== false)
+    .reduce((sum, w) => sum + getWalletBalance(w.name), 0)
+})
 
 const chartData = computed(() => {
   const expenses = transactions.value.filter(t => t.type === 'expense')
@@ -508,9 +528,19 @@ const createWallet = async () => {
   if (!newWalletName.value || !user.value) return
   try {
     await addDoc(collection(db, 'wallets'), {
-      name: newWalletName.value, emoji: newWalletEmoji.value, colorHex: 'A594B6', initialBalance: Number(newWalletBalance.value) || 0, isArchived: false, userId: user.value.uid
+      name: newWalletName.value, 
+      emoji: newWalletEmoji.value, 
+      colorHex: 'A594B6', 
+      initialBalance: Number(newWalletBalance.value) || 0, 
+      isArchived: false,
+      includeInTotal: includeInTotal.value,
+      userId: user.value.uid
     })
-    newWalletName.value = ''; newWalletBalance.value = '0'; newWalletEmoji.value = '💳'; showAddWallet.value = false
+    newWalletName.value = ''; 
+    newWalletBalance.value = '0'; 
+    newWalletEmoji.value = '💳'; 
+    includeInTotal.value = true
+    showAddWallet.value = false
   } catch (error) { console.error('❌ Ошибка создания кошелька:', error) }
 }
 
