@@ -52,7 +52,8 @@
         {{ t.type === 'transfer' ? `Перевод на ${t.transferTo}` : (t.categoryName || 'Без категории') }}
       </p>
       <p class="text-xs text-textSecondary">{{ formatDate(t.date) }}</p>
-      <p v-if="t.walletName" class="text-xs text-textSecondary">{{ t.walletName }}</p>
+<p v-if="t.walletName" class="text-xs text-textSecondary">{{ t.walletName }}</p>
+<p v-if="t.comment" class="text-xs text-textSecondary italic mt-1">💬 {{ t.comment }}</p>
     </div>
   </div>
   <div class="flex items-center gap-2">
@@ -107,6 +108,16 @@
               <span class="text-xl">{{ cat.emoji }}</span><span class="text-sm">{{ cat.name }}</span>
             </button>
           </div>
+          <!-- Поле комментария -->
+<div class="mb-6">
+  <label class="block text-sm text-textSecondary mb-1">Комментарий (необязательно)</label>
+  <input 
+    v-model="newComment" 
+    type="text" 
+    placeholder="Например: обед с коллегами"
+    class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac"
+  >
+</div>
         </div>
 
         <!-- Поля для перевода -->
@@ -238,6 +249,9 @@
           <button @click="showGoals = true; showMenu = false" class="w-full flex items-center gap-4 p-4 bg-bgPrimary rounded-2xl text-left">
             <span class="text-2xl">✨</span><div><p class="font-semibold text-textPrimary">Мечты</p><p class="text-xs text-textSecondary">На что копишь</p></div>
           </button>
+          <button @click="showBudgetModal = true; showMenu = false" class="w-full flex items-center gap-4 p-4 bg-bgPrimary rounded-2xl text-left">
+        <span class="text-2xl"></span><div><p class="font-semibold text-textPrimary">Планирование</p><p class="text-xs text-textSecondary">Бюджет по категориям</p></div>
+      </button>
         </div>
       </div>
     </div>
@@ -296,6 +310,43 @@
         </div>
       </div>
     </div>
+    <!-- Модальное окно планирования бюджета -->
+<div v-if="showBudgetModal" class="fixed inset-0 bg-bgPrimary z-50 overflow-y-auto">
+  <div class="p-6">
+    <div class="flex justify-between items-center mb-8">
+      <h2 class="text-2xl font-bold text-textPrimary">Планирование бюджета </h2>
+      <button @click="showBudgetModal = false" class="text-textSecondary text-2xl">&times;</button>
+    </div>
+    
+    <div class="mb-6 p-4 bg-accentLilacLight/30 rounded-2xl">
+      <p class="text-sm text-textSecondary mb-1">Текущий месяц</p>
+      <p class="text-lg font-bold text-textPrimary">{{ currentMonthName }}</p>
+    </div>
+
+    <div class="space-y-3">
+      <div v-for="cat in categories.filter(c => !c.isHidden)" :key="cat.id" class="bg-cardSurface rounded-2xl p-4">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="text-2xl">{{ cat.emoji }}</span>
+          <p class="font-semibold text-textPrimary flex-1">{{ cat.name }}</p>
+        </div>
+        <div class="flex gap-2">
+          <input 
+            v-model="cat.plannedAmount" 
+            type="number" 
+            placeholder="0"
+            class="flex-1 text-base text-textPrimary bg-bgPrimary rounded-xl p-3 outline-none focus:ring-2 focus:ring-accentLilac"
+            @change="updateBudget(cat)"
+          >
+          <span class="text-textSecondary self-center">₽</span>
+        </div>
+        <div class="mt-2 flex justify-between text-xs text-textSecondary">
+          <span>Потрачено: {{ getCategorySpent(cat.name) }} ₽</span>
+          <span :class="getBudgetStatus(cat)">{{ getBudgetRemaining(cat) }} ₽</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
   </div>
 </template>
 
@@ -332,10 +383,15 @@ const newAmount = ref('')
 const newCategory = ref('Продукты')
 const newWallet = ref('')
 const newType = ref('expense')
+const newComment = ref('')
 const transactions = ref([])
 const categories = ref([])
 const wallets = ref([])
 const goals = ref([])
+const budgets = ref([])
+const showBudgetModal = ref(false)
+const newBudgetCategory = ref('')
+const newBudgetAmount = ref('')
 
 const newCategoryName = ref('')
 const newCategoryEmoji = ref('✨')
@@ -441,6 +497,7 @@ function openEditModal(transaction) {
   newType.value = transaction.type
   newWallet.value = transaction.walletName || (wallets.value.length > 0 ? wallets.value[0].name : '')
   newCategory.value = transaction.categoryName || 'Продукты'
+  newComment.value = transaction.comment || ''
   showAddModal.value = true
 }
 
@@ -449,6 +506,7 @@ function closeModal() {
   editingTransactionId.value = null
   transferFrom.value = ''
   transferTo.value = ''
+  newComment.value = ''
 }
 
 function logout() {
@@ -514,6 +572,12 @@ onMounted(() => {
         goals.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
       })
 
+      // Загружаем планы бюджета на текущий месяц
+const currentMonth = new Date().toISOString().slice(0, 7) // "2026-10"
+onSnapshot(query(collection(db, 'budgets'), where('userId', '==', uid), where('month', '==', currentMonth)), (snapshot) => {
+  budgets.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+})
+
       const q = query(collection(db, 'transactions'), where('userId', '==', uid))
       onSnapshot(q, (snapshot) => {
         transactions.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
@@ -539,6 +603,7 @@ const saveTransaction = async () => {
         walletName: transferFrom.value,
         transferTo: transferTo.value,
         categoryName: `Перевод на ${transferTo.value}`,
+        comment: newComment.value,
         userId: user.value.uid,
         date: new Date()
       })
@@ -558,6 +623,7 @@ const saveTransaction = async () => {
     categoryName: newCategory.value,
     walletName: newWallet.value,
     type: newType.value,
+    comment: newComment.value,
     userId: user.value.uid,
     date: new Date()
   }
@@ -603,6 +669,73 @@ const createWallet = async () => {
     includeInTotal.value = true
     showAddWallet.value = false
   } catch (error) { console.error('❌ Ошибка создания кошелька:', error) }
+}
+
+// Получаем название текущего месяца
+const currentMonthName = computed(() => {
+  const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+  return months[new Date().getMonth()] + ' ' + new Date().getFullYear()
+})
+
+// Считаем сколько потрачено по категории в текущем месяце
+function getCategorySpent(categoryName) {
+  const currentMonth = new Date().getMonth()
+  const currentYear = new Date().getFullYear()
+  
+  return transactions.value
+    .filter(t => {
+      if (t.type !== 'expense' || t.categoryName !== categoryName) return false
+      const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
+      return date.getMonth() === currentMonth && date.getFullYear() === currentYear
+    })
+    .reduce((sum, t) => sum + t.amount, 0)
+}
+
+// Находим план по категории
+function getBudgetForCategory(categoryName) {
+  const budget = budgets.value.find(b => b.categoryName === categoryName)
+  return budget?.plannedAmount || 0
+}
+
+// Сколько осталось по плану
+function getBudgetRemaining(category) {
+  const planned = getBudgetForCategory(category.name)
+  const spent = getCategorySpent(category.name)
+  return planned - spent
+}
+
+// Статус бюджета (цвет)
+function getBudgetStatus(category) {
+  const remaining = getBudgetRemaining(category)
+  const planned = getBudgetForCategory(category.name)
+  
+  if (planned === 0) return 'text-textSecondary'
+  if (remaining < 0) return 'text-red-500 font-bold'
+  if (remaining < planned * 0.2) return 'text-yellow-600 font-bold'
+  return 'text-incomeGreen font-bold'
+}
+
+// Сохраняем план в базу
+const updateBudget = async (category) => {
+  const amount = Number(category.plannedAmount) || 0
+  const currentMonth = new Date().toISOString().slice(0, 7)
+  
+  const existingBudget = budgets.value.find(b => b.categoryName === category.name)
+  
+  try {
+    if (existingBudget) {
+      await updateDoc(doc(db, 'budgets', existingBudget.id), { plannedAmount: amount })
+    } else {
+      await addDoc(collection(db, 'budgets'), {
+        userId: user.value.uid,
+        month: currentMonth,
+        categoryName: category.name,
+        plannedAmount: amount
+      })
+    }
+  } catch (error) {
+    console.error('Ошибка сохранения плана:', error)
+  }
 }
 
 const deleteTransaction = async (id) => {
