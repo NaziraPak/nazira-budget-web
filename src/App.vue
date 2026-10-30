@@ -39,23 +39,45 @@
       </div>
     </div>
 
-    <!-- Список транзакций -->
-    <div class="bg-cardSurface rounded-3xl p-5 mb-6">
-      <h3 class="text-textPrimary font-bold text-lg mb-4">Последние операции</h3>
-      <div v-if="transactions.length === 0" class="text-center py-8 text-textSecondary">Пока нет транзакций. Добавь первую!</div>
-      <div v-else class="space-y-3">
-        <div v-for="t in transactions" :key="t.id" class="flex items-center justify-between p-3 bg-bgPrimary rounded-2xl">
-  <div class="flex items-center gap-3">
-    <span class="text-2xl">{{ t.type === 'transfer' ? '↔️' : getCategoryEmoji(t.categoryName) }}</span>
-    <div>
-      <p class="font-semibold text-textPrimary">
-        {{ t.type === 'transfer' ? `Перевод на ${t.transferTo}` : (t.categoryName || 'Без категории') }}
-      </p>
-      <p class="text-xs text-textSecondary">{{ formatDate(t.date) }}</p>
-<p v-if="t.walletName" class="text-xs text-textSecondary">{{ t.walletName }}</p>
-<p v-if="t.comment" class="text-xs text-textSecondary italic mt-1">💬 {{ t.comment }}</p>
+    <!-- Группировка по категориям -->
+<div class="bg-cardSurface rounded-3xl p-5 mb-6">
+  <h3 class="text-textPrimary font-bold text-lg mb-4">Расходы по категориям</h3>
+  
+  <div v-if="groupedTransactions.length === 0" class="text-center py-8 text-textSecondary">В этом месяце пока нет расходов по категориям.</div>
+  
+  <div v-else class="space-y-4">
+    <div v-for="cat in groupedTransactions" :key="cat.name" class="bg-bgPrimary rounded-2xl p-4">
+      <!-- Заголовок категории (кликабельный) -->
+      <div @click="toggleCat(cat.name)" class="flex items-center justify-between cursor-pointer">
+        <div class="flex items-center gap-3 flex-1">
+          <span class="text-2xl">{{ cat.emoji }}</span>
+          <div class="flex-1">
+            <p class="font-semibold text-textPrimary">{{ cat.name }}</p>
+            <p class="text-xs text-textSecondary">Транзакций: {{ cat.items.length }}</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="font-bold text-accentLilac">{{ cat.total }} ₽</p>
+          <p class="text-xs text-textSecondary">
+            {{ expandedCats.includes(cat.name) ? 'Свернуть ▲' : 'Развернуть ▼' }}
+          </p>
+        </div>
+      </div>
+
+      <!-- Раскрывающийся список транзакций -->
+      <div v-if="expandedCats.includes(cat.name)" class="mt-4 space-y-2 border-t border-gray-100 pt-3">
+        <div v-for="t in cat.items" :key="t.id" class="flex justify-between items-center text-sm">
+          <div>
+            <p class="text-textPrimary">{{ t.comment || 'Без комментария' }}</p>
+            <p class="text-xs text-textSecondary">{{ formatDate(t.date) }} • {{ t.walletName }}</p>
+          </div>
+          <p class="font-bold text-accentLilac">-{{ t.amount }} ₽</p>
+        </div>
+      </div>
     </div>
   </div>
+</div>
+
   <div class="flex items-center gap-2">
     <span class="font-bold" :class="t.type === 'income' ? 'text-incomeGreen' : t.type === 'transfer' ? 'text-blue-500' : 'text-accentLilac'">
       {{ t.type === 'income' ? '+' : t.type === 'transfer' ? '→' : '-' }}{{ t.amount }} ₽
@@ -368,6 +390,37 @@ const userName = computed(() => user.value?.displayName || user.value?.email?.sp
 
 // Состояние UI
 const showAddModal = ref(false)
+
+// Группировка транзакций по категориям (только расходы)
+const groupedTransactions = computed(() => {
+  const groups = {}
+  transactions.value.forEach(t => {
+    if (t.type !== 'expense') return 
+    const catName = t.categoryName || 'Без категории'
+    if (!groups[catName]) {
+      groups[catName] = {
+        name: catName,
+        emoji: getCategoryEmoji(catName),
+        total: 0,
+        items: []
+      }
+    }
+    groups[catName].total += t.amount
+    groups[catName].items.push(t)
+  })
+  // Сортируем категории по сумме (от большей к меньшей)
+  return Object.values(groups).sort((a, b) => b.total - a.total)
+})
+
+// Для раскрытия/сворачивания списка внутри категории
+const expandedCats = ref([])
+function toggleCat(catName) {
+  if (expandedCats.value.includes(catName)) {
+    expandedCats.value = expandedCats.value.filter(n => n !== catName)
+  } else {
+    expandedCats.value.push(catName)
+  }
+}
 const showAddCategory = ref(false)
 const showMenu = ref(false)
 const showWallets = ref(false)
