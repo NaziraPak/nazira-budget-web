@@ -40,52 +40,41 @@
     </div>
 
     <!-- Группировка по категориям -->
-<div class="bg-cardSurface rounded-3xl p-5 mb-6">
-  <h3 class="text-textPrimary font-bold text-lg mb-4">Расходы по категориям</h3>
-  
-  <div v-if="groupedTransactions.length === 0" class="text-center py-8 text-textSecondary">В этом месяце пока нет расходов по категориям.</div>
-  
-  <div v-else class="space-y-4">
-    <div v-for="cat in groupedTransactions" :key="cat.name" class="bg-bgPrimary rounded-2xl p-4">
-      <!-- Заголовок категории (кликабельный) -->
-      <div @click="toggleCat(cat.name)" class="flex items-center justify-between cursor-pointer">
-        <div class="flex items-center gap-3 flex-1">
-          <span class="text-2xl">{{ cat.emoji }}</span>
-          <div class="flex-1">
-            <p class="font-semibold text-textPrimary">{{ cat.name }}</p>
-            <p class="text-xs text-textSecondary">Транзакций: {{ cat.items.length }}</p>
+    <div class="bg-cardSurface rounded-3xl p-5 mb-6">
+      <h3 class="text-textPrimary font-bold text-lg mb-4">Расходы по категориям</h3>
+      
+      <div v-if="groupedTransactions.length === 0" class="text-center py-8 text-textSecondary">В этом месяце пока нет расходов по категориям.</div>
+      
+      <div v-else class="space-y-4">
+        <div v-for="cat in groupedTransactions" :key="cat.name" class="bg-bgPrimary rounded-2xl p-4">
+          <!-- Заголовок категории (кликабельный) -->
+          <div @click="toggleCat(cat.name)" class="flex items-center justify-between cursor-pointer">
+            <div class="flex items-center gap-3 flex-1">
+              <span class="text-2xl">{{ cat.emoji }}</span>
+              <div class="flex-1">
+                <p class="font-semibold text-textPrimary">{{ cat.name }}</p>
+                <p class="text-xs text-textSecondary">Транзакций: {{ cat.items.length }}</p>
+              </div>
+            </div>
+            <div class="text-right">
+              <p class="font-bold text-accentLilac">{{ cat.total }} ₽</p>
+              <p class="text-xs text-textSecondary">
+                {{ expandedCats.includes(cat.name) ? 'Свернуть ▲' : 'Развернуть ▼' }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Раскрывающийся список транзакций -->
+          <div v-if="expandedCats.includes(cat.name)" class="mt-4 space-y-2 border-t border-gray-100 pt-3">
+            <div v-for="t in cat.items" :key="t.id" class="flex justify-between items-center text-sm">
+              <div>
+                <p class="text-textPrimary">{{ t.comment || 'Без комментария' }}</p>
+                <p class="text-xs text-textSecondary">{{ formatDate(t.date) }} • {{ t.walletName }}</p>
+              </div>
+              <p class="font-bold text-accentLilac">-{{ t.amount }} ₽</p>
+            </div>
           </div>
         </div>
-        <div class="text-right">
-          <p class="font-bold text-accentLilac">{{ cat.total }} ₽</p>
-          <p class="text-xs text-textSecondary">
-            {{ expandedCats.includes(cat.name) ? 'Свернуть ▲' : 'Развернуть ▼' }}
-          </p>
-        </div>
-      </div>
-
-      <!-- Раскрывающийся список транзакций -->
-      <div v-if="expandedCats.includes(cat.name)" class="mt-4 space-y-2 border-t border-gray-100 pt-3">
-        <div v-for="t in cat.items" :key="t.id" class="flex justify-between items-center text-sm">
-          <div>
-            <p class="text-textPrimary">{{ t.comment || 'Без комментария' }}</p>
-            <p class="text-xs text-textSecondary">{{ formatDate(t.date) }} • {{ t.walletName }}</p>
-          </div>
-          <p class="font-bold text-accentLilac">-{{ t.amount }} ₽</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-  <div class="flex items-center gap-2">
-    <span class="font-bold" :class="t.type === 'income' ? 'text-incomeGreen' : t.type === 'transfer' ? 'text-blue-500' : 'text-accentLilac'">
-      {{ t.type === 'income' ? '+' : t.type === 'transfer' ? '→' : '-' }}{{ t.amount }} ₽
-    </span>
-    <button v-if="t.type !== 'transfer'" @click="openEditModal(t)" class="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-sm">✏️</button>
-    <button v-if="t.type !== 'transfer'" @click="deleteTransaction(t.id)" class="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center text-red-500 text-sm">✕</button>
-  </div>
-</div>
       </div>
     </div>
 
