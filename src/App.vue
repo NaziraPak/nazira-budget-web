@@ -528,6 +528,35 @@ const remaining = computed(() => {
     .reduce((sum, w) => sum + getWalletBalance(w.name), 0)
 })
 
+function getPlan(name) {
+  const budget = budgets.value.find(b => b.categoryName === name)
+  return budget ? budget.plannedAmount : 0
+}
+
+const groupedTransactions = computed(() => {
+  const groups = {}
+  const [year, month] = selectedMonth.value.split('-').map(Number)
+  
+  transactions.value.forEach(t => {
+    if (t.type !== 'expense') return 
+    const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
+    if (date.getMonth() !== month - 1 || date.getFullYear() !== year) return
+
+    const catName = t.categoryName || 'Без категории'
+    if (!groups[catName]) {
+      groups[catName] = { name: catName, emoji: getCategoryEmoji(catName), total: 0, planned: getPlan(catName), items: [] }
+    }
+    groups[catName].total += t.amount
+    groups[catName].items.push(t)
+  })
+  
+  return Object.values(groups).sort((a, b) => {
+    if (a.planned > 0 && b.planned === 0) return -1
+    if (a.planned === 0 && b.planned > 0) return 1
+    return b.total - a.total
+  })
+})
+
 const chartData = computed(() => {
   const expenses = transactions.value.filter(t => t.type === 'expense')
   const grouped = {}
@@ -578,11 +607,6 @@ function getCategorySpent(categoryName) {
       return date.getMonth() === month - 1 && date.getFullYear() === year
     })
     .reduce((sum, t) => sum + t.amount, 0)
-}
-
-function getPlan(name) {
-  const budget = budgets.value.find(b => b.categoryName === name)
-  return budget ? budget.plannedAmount : 0
 }
 
 // === АВТОМАТИЧЕСКИЙ РАСЧЕТ БЮДЖЕТА ===
