@@ -43,7 +43,7 @@
     <div class="bg-cardSurface rounded-3xl p-5 mb-6">
       <h3 class="text-textPrimary font-bold text-lg mb-4">Расходы по категориям ({{ monthName }})</h3>
       
-      <div v-if="groupedTransactions.length === 0" class="text-center py-8 text-textSecondary">В этом месяце пока нет расходов по категориям.</div>
+      <div v-if="!groupedTransactions || groupedTransactions.length === 0" class="text-center py-8 text-textSecondary">В этом месяце пока нет расходов по категориям.</div>
       
       <div v-else class="space-y-4">
         <div v-for="cat in groupedTransactions" :key="cat.name" class="bg-bgPrimary rounded-2xl p-4">
@@ -363,7 +363,7 @@
 
         <!-- === БЛОК 1: ДОХОДЫ === -->
         <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2">
-          <span>💰</span> Доходы
+          <span></span> Доходы
         </h3>
         <div class="space-y-3 mb-6">
           <div v-for="cat in categories.filter(c => incomeCategoryNames.includes(c.name))" :key="cat.id" class="bg-cardSurface rounded-2xl p-4">
@@ -404,7 +404,7 @@
 
         <!-- === БЛОК 3: РАСХОДЫ === -->
         <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2">
-          <span>🛒</span> Расходы
+          <span></span> Расходы
         </h3>
         <div class="space-y-3">
           <div v-for="cat in categories.filter(c => !incomeCategoryNames.includes(c.name) && !c.isHidden)" :key="cat.id" class="bg-cardSurface rounded-2xl p-4">
@@ -491,8 +491,8 @@ const currentGoal = ref(null)
 const topUpAmount = ref('')
 const topUpWallet = ref('')
 
-const emojiOptions = ['🛒', '☕️', '🚗', '👗', '💰', '👦🏻', '🏠', '⛽️', '🍔', '🎙️', '🎮', '🏕️', '✈️', '💊', '💃', '🐾', '↔']
-const walletEmojiOptions = ['🅰️', '💵', '💳', '💰', '👛', '💎']
+const emojiOptions = ['🛒', '☕️', '🚗', '', '💰', '👦', '🏠', '⛽️', '🍔', '🎙️', '🎮', '🏕️', '✈️', '💊', '💃', '🐾', '↔']
+const walletEmojiOptions = ['🅰️', '', '💳', '💰', '', '💎']
 const colorOptions = ['F4E1E6', 'fadadd', 'D9A8BA', 'C4B5D4', 'B8C8D8', 'A8C8C8', 'C8B8D4', 'B8D4E8', 'F4B896', 'F5E6E8', 'F5E6C8', 'E5EFE2', 'FADADD', 'C8D8E8', 'D4A8A8', 'F0E6D2', 'D4E8E0', 'A89888', '88C4C0', 'A8C8E0', 'A86878', '1E3A5F', '6B5868', 'B8A898', '4A88C0', 'F0B8C0']
 
 // === HELPERS ===
@@ -528,11 +528,66 @@ const remaining = computed(() => {
     .reduce((sum, w) => sum + getWalletBalance(w.name), 0)
 })
 
+// === ПЛАНИРОВАНИЕ БЮДЖЕТА (УМНАЯ МАТЕМАТИКА) ===
+
+// Упрощённый список категорий доходов
+const incomeCategoryNames = ['Зарплата', 'Другое']
+
+const monthName = computed(() => {
+  const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
+  const date = new Date(selectedMonth.value + '-01')
+  return months[date.getMonth()] + ' ' + date.getFullYear()
+})
+
+function changeMonth(delta) {
+  const date = new Date(selectedMonth.value + '-01')
+  date.setMonth(date.getMonth() + delta)
+  selectedMonth.value = date.toISOString().slice(0, 7)
+}
+
+function getCategorySpent(categoryName) {
+  const [year, month] = selectedMonth.value.split('-').map(Number)
+  return transactions.value
+    .filter(t => {
+      if (t.type !== 'expense' || t.categoryName !== categoryName) return false
+      const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
+      return date.getMonth() === month - 1 && date.getFullYear() === year
+    })
+    .reduce((sum, t) => sum + t.amount, 0)
+}
+
+// Получаем план для категории (ОБЪЯВЛЕНО ДО groupedTransactions!)
 function getPlan(name) {
+  if (!budgets.value) return 0
   const budget = budgets.value.find(b => b.categoryName === name)
   return budget ? budget.plannedAmount : 0
 }
 
+// === АВТОМАТИЧЕСКИЙ РАСЧЕТ БЮДЖЕТА ===
+const totalPlannedIncome = computed(() => {
+  return categories.value
+    .filter(c => incomeCategoryNames.includes(c.name))
+    .reduce((sum, c) => sum + getPlan(c.name), 0)
+})
+
+const totalPlannedExpenses = computed(() => {
+  return categories.value
+    .filter(c => !incomeCategoryNames.includes(c.name) && !c.isHidden)
+    .reduce((sum, c) => sum + getPlan(c.name), 0)
+})
+
+const totalPlannedGoals = computed(() => {
+  return goals.value
+    .filter(g => !g.isArchived)
+    .reduce((sum, g) => sum + getPlan(g.name), 0)
+})
+
+// Свободные средства = Доходы - Расходы - Мечты
+const unallocated = computed(() => {
+  return totalPlannedIncome.value - totalPlannedExpenses.value - totalPlannedGoals.value
+})
+
+// Группировка транзакций (после getPlan!)
 const groupedTransactions = computed(() => {
   const groups = {}
   const [year, month] = selectedMonth.value.split('-').map(Number)
@@ -581,59 +636,7 @@ const chartOptions = {
   }
 }
 
-// === ПЛАНИРОВАНИЕ БЮДЖЕТА (УМНАЯ МАТЕМАТИКА) ===
-
-// Список категорий, которые мы считаем доходами (можешь добавить свои)
-const incomeCategoryNames = ['Зарплата', 'Подработка', 'Кэшбэк', 'Проценты', 'Подарок', 'Продажа', 'Дивиденды', 'Возврат']
-
-const monthName = computed(() => {
-  const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
-  const date = new Date(selectedMonth.value + '-01')
-  return months[date.getMonth()] + ' ' + date.getFullYear()
-})
-
-function changeMonth(delta) {
-  const date = new Date(selectedMonth.value + '-01')
-  date.setMonth(date.getMonth() + delta)
-  selectedMonth.value = date.toISOString().slice(0, 7)
-}
-
-function getCategorySpent(categoryName) {
-  const [year, month] = selectedMonth.value.split('-').map(Number)
-  return transactions.value
-    .filter(t => {
-      if (t.type !== 'expense' || t.categoryName !== categoryName) return false
-      const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
-      return date.getMonth() === month - 1 && date.getFullYear() === year
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
-}
-
-// === АВТОМАТИЧЕСКИЙ РАСЧЕТ БЮДЖЕТА ===
-const totalPlannedIncome = computed(() => {
-  return categories.value
-    .filter(c => incomeCategoryNames.includes(c.name))
-    .reduce((sum, c) => sum + getPlan(c.name), 0)
-})
-
-const totalPlannedExpenses = computed(() => {
-  return categories.value
-    .filter(c => !incomeCategoryNames.includes(c.name) && !c.isHidden)
-    .reduce((sum, c) => sum + getPlan(c.name), 0)
-})
-
-const totalPlannedGoals = computed(() => {
-  return goals.value
-    .filter(g => !g.isArchived)
-    .reduce((sum, g) => sum + getPlan(g.name), 0)
-})
-
-// Свободные средства = Доходы - Расходы - Мечты
-const unallocated = computed(() => {
-  return totalPlannedIncome.value - totalPlannedExpenses.value - totalPlannedGoals.value
-})
-
-// Сохранение плана (работает и для категорий, и для мечт, так как использует имя как ключ)
+// Сохранение плана
 const updateBudget = async (name, amount) => {
   if (!user.value) return
   const existing = budgets.value.find(b => b.categoryName === name)
