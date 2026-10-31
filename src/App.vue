@@ -454,6 +454,7 @@ const showGoals = ref(false)
 const showAddGoal = ref(false)
 const showTopUpGoal = ref(false)
 const editingTransactionId = ref(null)
+const expandedCats = ref([])
 
 // Transaction State
 const newAmount = ref('')
@@ -670,6 +671,14 @@ function setType(type) {
   if (type === 'income') newCategory.value = 'Зарплата'
   else if (type === 'expense') newCategory.value = 'Продукты'
   else if (type === 'transfer') { transferFrom.value = ''; transferTo.value = '' }
+}
+
+function toggleCat(catName) {
+  if (expandedCats.value.includes(catName)) {
+    expandedCats.value = expandedCats.value.filter(n => n !== catName)
+  } else {
+    expandedCats.value.push(catName)
+  }
 }
 
 function openAddModal() {
