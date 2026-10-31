@@ -314,36 +314,117 @@
       </div>
     </div>
 
-    <!-- Планирование бюджета -->
+        <!-- Планирование бюджета -->
     <div v-if="showBudgetModal" class="fixed inset-0 bg-bgPrimary z-50 overflow-y-auto">
-      <div class="p-6">
+      <div class="p-6 pb-20">
         <div class="flex justify-between items-center mb-6">
           <button @click="showBudgetModal = false" class="text-textSecondary text-2xl">&times;</button>
           <h2 class="text-xl font-bold text-textPrimary">Планирование</h2>
           <div class="w-8"></div>
         </div>
+
+        <!-- Переключатель месяцев -->
         <div class="flex items-center justify-between bg-cardSurface rounded-2xl p-3 mb-6">
           <button @click="changeMonth(-1)" class="w-10 h-10 rounded-full bg-bgPrimary flex items-center justify-center text-xl">←</button>
           <span class="font-bold text-textPrimary">{{ monthName }}</span>
           <button @click="changeMonth(1)" class="w-10 h-10 rounded-full bg-bgPrimary flex items-center justify-center text-xl">→</button>
         </div>
-        <div class="space-y-4">
-          <div v-for="cat in categories.filter(c => !c.isHidden)" :key="cat.id" class="bg-cardSurface rounded-2xl p-4">
-            <div class="flex items-center gap-3 mb-3">
-              <span class="text-2xl">{{ cat.emoji }}</span>
+
+        <!-- === УМНАЯ ШАПКА: МАТЕМАТИКА БЮДЖЕТА === -->
+        <div class="bg-accentLilacLight/30 rounded-2xl p-5 mb-6 border border-accentLilac/20">
+          <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
+            <div>
+              <p class="text-textSecondary mb-1">Ожидаемый доход</p>
+              <p class="text-lg font-bold text-incomeGreen">+{{ totalPlannedIncome }} ₽</p>
+            </div>
+            <div class="text-right">
+              <p class="text-textSecondary mb-1">Запланировано</p>
+              <p class="text-lg font-bold text-accentLilac">-{{ totalPlannedExpenses + totalPlannedGoals }} ₽</p>
+            </div>
+          </div>
+          
+          <!-- Прогресс-бар распределения -->
+          <div class="w-full bg-gray-200 rounded-full h-3 mb-2 overflow-hidden">
+            <div class="h-3 rounded-full transition-all duration-500 bg-accentLilac" 
+                 :style="{ width: totalPlannedIncome > 0 ? Math.min(100, ((totalPlannedExpenses + totalPlannedGoals) / totalPlannedIncome) * 100) + '%' : '0%' }">
+            </div>
+          </div>
+          
+          <div class="flex justify-between items-center pt-2 border-t border-accentLilac/20">
+            <span class="text-sm font-semibold text-textPrimary">Свободно (не распределено):</span>
+            <span class="text-xl font-bold" :class="unallocated >= 0 ? 'text-incomeGreen' : 'text-red-500'">
+              {{ unallocated }} ₽
+            </span>
+          </div>
+          <p class="text-xs text-textSecondary mt-2 text-center" v-if="unallocated === 0 && totalPlannedIncome > 0">
+            🎉 Идеально! Каждый рубль имеет свою цель.
+          </p>
+        </div>
+
+        <!-- === БЛОК 1: ДОХОДЫ === -->
+        <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2">
+          <span>💰</span> Доходы
+        </h3>
+        <div class="space-y-3 mb-6">
+          <div v-for="cat in categories.filter(c => incomeCategoryNames.includes(c.name))" :key="cat.id" class="bg-cardSurface rounded-2xl p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xl">{{ cat.emoji }}</span>
               <p class="font-semibold text-textPrimary flex-1">{{ cat.name }}</p>
             </div>
-            <div class="flex items-center gap-2 mb-3">
-              <span class="text-xs text-textSecondary w-12">План:</span>
+            <div class="flex items-center gap-2">
+              <input :value="getPlan(cat.name)" @input="updateBudget(cat.name, $event.target.value)" type="number" placeholder="0" class="flex-1 text-base text-textPrimary bg-bgPrimary rounded-xl p-2 outline-none focus:ring-2 focus:ring-incomeGreen">
+              <span class="text-textSecondary">₽</span>
+            </div>
+          </div>
+          <div v-if="categories.filter(c => incomeCategoryNames.includes(c.name)).length === 0" class="text-sm text-textSecondary text-center py-2">
+            Нет категорий доходов. Создайте "Зарплата" или "Подработка".
+          </div>
+        </div>
+
+        <!-- === БЛОК 2: МЕЧТЫ (НАКОПЛЕНИЯ) === -->
+        <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2">
+          <span>✨</span> Мечты (отложить в этом месяце)
+        </h3>
+        <div class="space-y-3 mb-6">
+          <div v-for="goal in goals.filter(g => !g.isArchived)" :key="goal.id" class="bg-cardSurface rounded-2xl p-4 border-l-4" :style="{ borderLeftColor: `#${goal.colorHex}` }">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xl">{{ goal.emoji }}</span>
+              <p class="font-semibold text-textPrimary flex-1">{{ goal.name }}</p>
+              <span class="text-xs text-textSecondary">Цель: {{ goal.targetAmount }} ₽</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <input :value="getPlan(goal.name)" @input="updateBudget(goal.name, $event.target.value)" type="number" placeholder="0" class="flex-1 text-base text-textPrimary bg-bgPrimary rounded-xl p-2 outline-none focus:ring-2 focus:ring-accentLilac">
+              <span class="text-textSecondary">₽</span>
+            </div>
+          </div>
+          <div v-if="goals.filter(g => !g.isArchived).length === 0" class="text-sm text-textSecondary text-center py-2">
+            Нет активных мечт.
+          </div>
+        </div>
+
+        <!-- === БЛОК 3: РАСХОДЫ === -->
+        <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2">
+          <span>🛒</span> Расходы
+        </h3>
+        <div class="space-y-3">
+          <div v-for="cat in categories.filter(c => !incomeCategoryNames.includes(c.name) && !c.isHidden)" :key="cat.id" class="bg-cardSurface rounded-2xl p-4">
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xl">{{ cat.emoji }}</span>
+              <p class="font-semibold text-textPrimary flex-1">{{ cat.name }}</p>
+            </div>
+            <div class="flex items-center gap-2 mb-2">
               <input :value="getPlan(cat.name)" @input="updateBudget(cat.name, $event.target.value)" type="number" placeholder="0" class="flex-1 text-base text-textPrimary bg-bgPrimary rounded-xl p-2 outline-none focus:ring-2 focus:ring-accentLilac">
-              <span class="text-textSecondary self-center">₽</span>
+              <span class="text-textSecondary">₽</span>
             </div>
             <div class="flex justify-between text-xs text-textSecondary px-1">
               <span>Потрачено: {{ getCategorySpent(cat.name) }} ₽</span>
-              <span :class="getPlan(cat.name) - getCategorySpent(cat.name) < 0 ? 'text-red-500 font-bold' : 'text-incomeGreen font-bold'">Остаток: {{ getPlan(cat.name) - getCategorySpent(cat.name) }} ₽</span>
+              <span :class="getPlan(cat.name) - getCategorySpent(cat.name) < 0 ? 'text-red-500 font-bold' : 'text-incomeGreen font-bold'">
+                Остаток: {{ getPlan(cat.name) - getCategorySpent(cat.name) }} ₽
+              </span>
             </div>
           </div>
         </div>
+
       </div>
     </div>
   </div>
@@ -471,7 +552,11 @@ const chartOptions = {
   }
 }
 
-// === GROUPING & BUDGET LOGIC ===
+// === ПЛАНИРОВАНИЕ БЮДЖЕТА (УМНАЯ МАТЕМАТИКА) ===
+
+// Список категорий, которые мы считаем доходами (можешь добавить свои)
+const incomeCategoryNames = ['Зарплата', 'Подработка', 'Кэшбэк', 'Проценты', 'Подарок', 'Продажа', 'Дивиденды', 'Возврат']
+
 const monthName = computed(() => {
   const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
   const date = new Date(selectedMonth.value + '-01')
@@ -495,47 +580,39 @@ function getCategorySpent(categoryName) {
     .reduce((sum, t) => sum + t.amount, 0)
 }
 
-function getPlan(categoryName) {
-  const budget = budgets.value.find(b => b.categoryName === categoryName)
+function getPlan(name) {
+  const budget = budgets.value.find(b => b.categoryName === name)
   return budget ? budget.plannedAmount : 0
 }
 
-const groupedTransactions = computed(() => {
-  const groups = {}
-  const [year, month] = selectedMonth.value.split('-').map(Number)
-  
-  transactions.value.forEach(t => {
-    if (t.type !== 'expense') return 
-    const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
-    if (date.getMonth() !== month - 1 || date.getFullYear() !== year) return
-
-    const catName = t.categoryName || 'Без категории'
-    if (!groups[catName]) {
-      groups[catName] = { name: catName, emoji: getCategoryEmoji(catName), total: 0, planned: getPlan(catName), items: [] }
-    }
-    groups[catName].total += t.amount
-    groups[catName].items.push(t)
-  })
-  
-  return Object.values(groups).sort((a, b) => {
-    if (a.planned > 0 && b.planned === 0) return -1
-    if (a.planned === 0 && b.planned > 0) return 1
-    return b.total - a.total
-  })
+// === АВТОМАТИЧЕСКИЙ РАСЧЕТ БЮДЖЕТА ===
+const totalPlannedIncome = computed(() => {
+  return categories.value
+    .filter(c => incomeCategoryNames.includes(c.name))
+    .reduce((sum, c) => sum + getPlan(c.name), 0)
 })
 
-const expandedCats = ref([])
-function toggleCat(catName) {
-  if (expandedCats.value.includes(catName)) {
-    expandedCats.value = expandedCats.value.filter(n => n !== catName)
-  } else {
-    expandedCats.value.push(catName)
-  }
-}
+const totalPlannedExpenses = computed(() => {
+  return categories.value
+    .filter(c => !incomeCategoryNames.includes(c.name) && !c.isHidden)
+    .reduce((sum, c) => sum + getPlan(c.name), 0)
+})
 
-const updateBudget = async (categoryName, amount) => {
+const totalPlannedGoals = computed(() => {
+  return goals.value
+    .filter(g => !g.isArchived)
+    .reduce((sum, g) => sum + getPlan(g.name), 0)
+})
+
+// Свободные средства = Доходы - Расходы - Мечты
+const unallocated = computed(() => {
+  return totalPlannedIncome.value - totalPlannedExpenses.value - totalPlannedGoals.value
+})
+
+// Сохранение плана (работает и для категорий, и для мечт, так как использует имя как ключ)
+const updateBudget = async (name, amount) => {
   if (!user.value) return
-  const existing = budgets.value.find(b => b.categoryName === categoryName)
+  const existing = budgets.value.find(b => b.categoryName === name)
   const numAmount = Number(amount) || 0
   
   try {
@@ -545,7 +622,7 @@ const updateBudget = async (categoryName, amount) => {
       await addDoc(collection(db, 'budgets'), {
         userId: user.value.uid,
         month: selectedMonth.value,
-        categoryName: categoryName,
+        categoryName: name,
         plannedAmount: numAmount
       })
     }
