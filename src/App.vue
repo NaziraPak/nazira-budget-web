@@ -39,6 +39,10 @@
       </div>
     </div>
 
+    <button @click="openAddModal" class="w-full bg-accentLilac text-white font-bold py-4 rounded-full shadow-lg shadow-accentLilac/40 flex items-center justify-center gap-2 text-lg">
+      <span>+</span> Добавить операцию
+    </button>
+
     <!-- Группировка по категориям -->
     <div class="bg-cardSurface rounded-3xl p-5 mb-6">
       <h3 class="text-textPrimary font-bold text-lg mb-4">Расходы по категориям ({{ monthName }})</h3>
@@ -57,7 +61,10 @@
             </div>
             <div class="text-right">
               <p class="font-bold text-accentLilac">{{ cat.total }} ₽</p>
-              <p class="text-xs text-textSecondary">{{ expandedCats.includes(cat.name) ? 'Свернуть ▲' : 'Развернуть ▼' }}</p>
+              <p v-if="cat.planned > 0" class="text-xs font-semibold" :class="cat.planned - cat.total < 0 ? 'text-red-500' : 'text-incomeGreen'">
+                из {{ cat.planned }} ₽ (ост. {{ cat.planned - cat.total }} ₽)
+              </p>
+              <p v-else class="text-xs text-textSecondary">без плана</p>
             </div>
           </div>
 
@@ -71,22 +78,23 @@
           </div>
 
           <!-- Раскрывающийся список -->
-          <div v-if="expandedCats.includes(cat.name)" class="mt-4 space-y-2 border-t border-gray-100 pt-3">
-            <div v-for="t in cat.items" :key="t.id" class="flex justify-between items-center text-sm">
-              <div>
-                <p class="text-textPrimary">{{ t.comment || 'Без комментария' }}</p>
-                <p class="text-xs text-textSecondary">{{ formatDate(t.date) }} • {{ t.walletName }}</p>
-              </div>
-              <p class="font-bold text-accentLilac">-{{ t.amount }} ₽</p>
-            </div>
-          </div>
+<div v-if="expandedCats.includes(cat.name)" class="mt-4 space-y-2 border-t border-gray-100 pt-3">
+  <div v-for="t in cat.items" :key="t.id" class="flex justify-between items-center text-sm">
+    <div class="flex-1">
+      <p class="text-textPrimary">{{ t.comment || 'Без комментария' }}</p>
+      <p class="text-xs text-textSecondary">{{ formatDate(t.date) }} • {{ t.walletName }}</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <p class="font-bold text-accentLilac">-{{ t.amount }} ₽</p>
+      <button @click.stop="openEditModal(t)" class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-xs">✏️</button>
+      <button @click.stop="deleteTransaction(t.id)" class="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-red-500 text-xs">✕</button>
+    </div>
+  </div>
+</div>
         </div>
       </div>
     </div>
 
-    <button @click="openAddModal" class="w-full bg-accentLilac text-white font-bold py-4 rounded-full shadow-lg shadow-accentLilac/40 flex items-center justify-center gap-2 text-lg">
-      <span>+</span> Добавить операцию
-    </button>
 
     <!-- ================= МОДАЛЬНЫЕ ОКНА ================= -->
     
@@ -277,15 +285,19 @@
         </div>
         <div class="space-y-4">
           <div v-for="wallet in wallets.filter(w => !w.isArchived)" :key="wallet.id" class="bg-cardSurface rounded-2xl p-5 shadow-lg">
-            <div class="flex items-center gap-4 mb-3">
-              <span class="text-3xl">{{ wallet.emoji }}</span>
-              <div><p class="font-bold text-textPrimary text-lg">{{ wallet.name }}</p><p class="text-xs text-textSecondary">Начальный: {{ wallet.initialBalance }} ₽</p></div>
-            </div>
-            <div class="flex justify-between items-center">
-              <p class="text-textSecondary text-sm">Текущий баланс</p>
-              <p class="text-2xl font-bold" :class="getWalletBalance(wallet.name) >= 0 ? 'text-accentLilac' : 'text-red-500'">{{ getWalletBalance(wallet.name) }} ₽</p>
-            </div>
-          </div>
+  <div class="flex items-center gap-4 mb-3">
+    <span class="text-3xl">{{ wallet.emoji }}</span>
+    <div class="flex-1"><p class="font-bold text-textPrimary text-lg">{{ wallet.name }}</p><p class="text-xs text-textSecondary">Начальный: {{ wallet.initialBalance }} ₽</p></div>
+  </div>
+  <div class="flex justify-between items-center mb-3">
+    <p class="text-textSecondary text-sm">Текущий баланс</p>
+    <p class="text-2xl font-bold" :class="getWalletBalance(wallet.name) >= 0 ? 'text-accentLilac' : 'text-red-500'">{{ getWalletBalance(wallet.name) }} ₽</p>
+  </div>
+  <div class="flex gap-2">
+    <button @click="openEditWallet(wallet)" class="flex-1 py-2 rounded-xl font-medium bg-blue-100 text-blue-600 text-sm">✏️ Изменить</button>
+    <button @click="archiveWallet(wallet.id)" class="w-10 py-2 rounded-xl font-medium bg-red-100 text-red-500 text-sm">🗑️</button>
+  </div>
+</div>
         </div>
         <button @click="showAddWallet = true" class="w-full bg-accentLilac text-white font-bold py-4 rounded-full mt-6">+ Добавить кошелек</button>
       </div>
@@ -295,7 +307,7 @@
     <div v-if="showAddWallet" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div class="bg-cardSurface w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl">
         <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold text-textPrimary">Новый кошелек</h3>
+          <h3 class="text-xl font-bold text-textPrimary">{{ editingWalletId ? 'Редактировать кошелек' : 'Новый кошелек' }}</h3>
           <button @click="showAddWallet = false" class="text-textSecondary text-2xl">&times;</button>
         </div>
         <div class="space-y-4">
@@ -560,7 +572,9 @@ function getCategorySpent(categoryName) {
 // Получаем план для категории (ОБЪЯВЛЕНО ДО groupedTransactions!)
 function getPlan(name) {
   if (!budgets.value) return 0
-  const budget = budgets.value.find(b => b.categoryName === name)
+  const budget = budgets.value.find(b => 
+    b.categoryName === name && b.month === selectedMonth.value
+  )
   return budget ? budget.plannedAmount : 0
 }
 
@@ -614,7 +628,14 @@ const groupedTransactions = computed(() => {
 })
 
 const chartData = computed(() => {
-  const expenses = transactions.value.filter(t => t.type === 'expense')
+  const [year, month] = selectedMonth.value.split('-').map(Number)
+  
+  const expenses = transactions.value.filter(t => {
+    if (t.type !== 'expense') return false
+    const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
+    return date.getMonth() === month - 1 && date.getFullYear() === year
+  })
+  
   const grouped = {}
   expenses.forEach(t => { 
     const key = t.categoryName || 'Без категории'
@@ -745,9 +766,49 @@ const createCategory = async () => {
 const createWallet = async () => {
   if (!newWalletName.value || !user.value) return
   try {
-    await addDoc(collection(db, 'wallets'), { name: newWalletName.value, emoji: newWalletEmoji.value, colorHex: 'A594B6', initialBalance: Number(newWalletBalance.value) || 0, isArchived: false, includeInTotal: includeInTotal.value, userId: user.value.uid })
-    newWalletName.value = ''; newWalletBalance.value = '0'; newWalletEmoji.value = '💳'; includeInTotal.value = true; showAddWallet.value = false
-  } catch (error) { console.error('Ошибка создания кошелька:', error) }
+    if (editingWalletId.value) {
+      await updateDoc(doc(db, 'wallets', editingWalletId.value), {
+        name: newWalletName.value,
+        emoji: newWalletEmoji.value,
+        initialBalance: Number(newWalletBalance.value) || 0,
+        includeInTotal: includeInTotal.value
+      })
+      editingWalletId.value = null
+    } else {
+      await addDoc(collection(db, 'wallets'), {
+        name: newWalletName.value,
+        emoji: newWalletEmoji.value,
+        colorHex: 'A594B6',
+        initialBalance: Number(newWalletBalance.value) || 0,
+        isArchived: false,
+        includeInTotal: includeInTotal.value,
+        userId: user.value.uid
+      })
+    }
+    newWalletName.value = ''
+    newWalletBalance.value = '0'
+    newWalletEmoji.value = '💳'
+    includeInTotal.value = true
+    showAddWallet.value = false
+  } catch (error) { console.error('Ошибка сохранения кошелька:', error) }
+}
+
+const editingWalletId = ref(null)
+
+function openEditWallet(wallet) {
+  editingWalletId.value = wallet.id
+  newWalletName.value = wallet.name
+  newWalletBalance.value = String(wallet.initialBalance)
+  newWalletEmoji.value = wallet.emoji
+  includeInTotal.value = wallet.includeInTotal !== false
+  showAddWallet.value = true
+}
+
+const archiveWallet = async (id) => {
+  if (!confirm('Архивировать этот кошелек?')) return
+  try {
+    await updateDoc(doc(db, 'wallets', id), { isArchived: true })
+  } catch (error) { console.error('Ошибка архивации:', error) }
 }
 
 function openTopUpGoal(goal) {
