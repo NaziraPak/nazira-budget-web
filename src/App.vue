@@ -1,10 +1,7 @@
 <template>
-  <!-- Экран входа -->
   <Auth v-if="!user" />
 
-  <!-- Основное приложение -->
   <div v-else class="min-h-screen bg-bgPrimary p-6">
-    <!-- Приветствие -->
     <div class="flex justify-between items-center mb-8">
       <div>
         <h1 class="text-2xl font-bold text-textPrimary">Привет, {{ userName }} 🐹</h1>
@@ -16,7 +13,6 @@
       </div>
     </div>
 
-    <!-- Карточка с остатком и диаграммой -->
     <div class="bg-cardSurface rounded-[32px] p-6 shadow-lg mb-6">
       <h2 class="text-center text-textSecondary text-sm font-medium mb-4">Как делятся твои денежки</h2>
       <div class="h-56 flex items-center justify-center mb-6 relative">
@@ -39,11 +35,10 @@
       </div>
     </div>
 
-    <button @click="openAddModal" class="w-full bg-accentLilac text-white font-bold py-4 rounded-full shadow-lg shadow-accentLilac/40 flex items-center justify-center gap-2 text-lg">
+    <button @click="openAddModal" class="w-full bg-accentLilac text-white font-bold py-4 rounded-full shadow-lg shadow-accentLilac/40 flex items-center justify-center gap-2 text-lg mb-6">
       <span>+</span> Добавить операцию
     </button>
 
-    <!-- Группировка по категориям -->
     <div class="bg-cardSurface rounded-3xl p-5 mb-6">
       <h3 class="text-textPrimary font-bold text-lg mb-4">Расходы по категориям ({{ monthName }})</h3>
       
@@ -68,37 +63,28 @@
             </div>
           </div>
 
-          <!-- Прогресс-бар плана -->
           <div v-if="cat.planned > 0" class="w-full bg-gray-200 rounded-full h-2 mt-3 overflow-hidden">
             <div class="h-2 rounded-full transition-all duration-500" :class="cat.total > cat.planned ? 'bg-red-500' : 'bg-accentLilac'" :style="{ width: Math.min(100, (cat.total / cat.planned) * 100) + '%' }"></div>
           </div>
-          <div v-if="cat.planned > 0" class="flex justify-between text-xs text-textSecondary mt-1">
-            <span>План: {{ cat.planned }} ₽</span>
-            <span :class="cat.planned - cat.total < 0 ? 'text-red-500' : 'text-incomeGreen'">Осталось: {{ cat.planned - cat.total }} ₽</span>
-          </div>
 
-          <!-- Раскрывающийся список -->
-<div v-if="expandedCats.includes(cat.name)" class="mt-4 space-y-2 border-t border-gray-100 pt-3">
-  <div v-for="t in cat.items" :key="t.id" class="flex justify-between items-center text-sm">
-    <div class="flex-1">
-      <p class="text-textPrimary">{{ t.comment || 'Без комментария' }}</p>
-      <p class="text-xs text-textSecondary">{{ formatDate(t.date) }} • {{ t.walletName }}</p>
-    </div>
-    <div class="flex items-center gap-2">
-      <p class="font-bold text-accentLilac">-{{ t.amount }} ₽</p>
-      <button @click.stop="openEditModal(t)" class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-xs">✏️</button>
-      <button @click.stop="deleteTransaction(t.id)" class="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-red-500 text-xs">✕</button>
-    </div>
-  </div>
-</div>
+          <div v-if="expandedCats.includes(cat.name)" class="mt-4 space-y-2 border-t border-gray-100 pt-3">
+            <div v-for="t in cat.items" :key="t.id" class="flex justify-between items-center text-sm">
+              <div class="flex-1">
+                <p class="text-textPrimary">{{ t.comment || 'Без комментария' }}</p>
+                <p class="text-xs text-textSecondary">{{ formatDate(t.date) }} • {{ t.walletName }}</p>
+              </div>
+              <div class="flex items-center gap-2">
+                <p class="font-bold text-accentLilac">-{{ t.amount }} ₽</p>
+                <button @click.stop="openEditModal(t)" class="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-xs">✏️</button>
+                <button @click.stop="deleteTransaction(t.id)" class="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center text-red-500 text-xs">✕</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
-
-    <!-- ================= МОДАЛЬНЫЕ ОКНА ================= -->
-    
-    <!-- Добавление/редактирование операции -->
+    <!-- МОДАЛЬНЫЕ ОКНА -->
     <div v-if="showAddModal" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div class="bg-cardSurface w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-6">
@@ -114,7 +100,6 @@
           <label class="block text-sm text-textSecondary mb-1">{{ newType === 'expense' ? 'Сколько потратили?' : 'Сколько получили?' }}</label>
           <input v-model="newAmount" type="number" placeholder="0" class="w-full text-3xl font-bold text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac">
         </div>
-        
         <div v-if="newType !== 'transfer'" class="mb-6">
           <label class="block text-sm text-textSecondary mb-2">Кошелек</label>
           <div class="flex gap-3 overflow-x-auto pb-2">
@@ -123,7 +108,6 @@
             </button>
           </div>
         </div>
-
         <div v-if="newType !== 'transfer'" class="mb-6">
           <div class="flex justify-between items-center mb-2">
             <label class="text-sm text-textSecondary">Категория</label>
@@ -135,12 +119,10 @@
             </button>
           </div>
         </div>
-
         <div class="mb-6">
           <label class="block text-sm text-textSecondary mb-1">Комментарий (необязательно)</label>
           <input v-model="newComment" type="text" placeholder="Например: обед с коллегами" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac">
         </div>
-
         <div v-if="newType === 'transfer'" class="space-y-4 mb-6">
           <div>
             <label class="block text-sm text-textSecondary mb-2">Откуда</label>
@@ -159,14 +141,12 @@
             </div>
           </div>
         </div>
-
         <button @click="saveTransaction" :disabled="!newAmount || newAmount <= 0 || (newType !== 'transfer' && (!newWallet || !newCategory)) || (newType === 'transfer' && (!transferFrom || !transferTo || transferFrom === transferTo))" class="w-full bg-accentLilac text-white font-bold py-4 rounded-2xl mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
           {{ editingTransactionId ? 'Сохранить' : (newType === 'expense' ? 'Сохранить расход' : newType === 'income' ? 'Сохранить доход' : 'Перевести') }}
         </button>
       </div>
     </div>
 
-    <!-- Новая категория -->
     <div v-if="showAddCategory" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div class="bg-cardSurface w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl">
         <div class="flex justify-between items-center mb-6">
@@ -185,7 +165,6 @@
       </div>
     </div>
 
-    <!-- Мечты (Цели) -->
     <div v-if="showGoals" class="fixed inset-0 bg-bgPrimary z-50 overflow-y-auto">
       <div class="p-6">
         <div class="flex justify-between items-center mb-8">
@@ -215,7 +194,6 @@
       </div>
     </div>
 
-    <!-- Пополнение цели -->
     <div v-if="showTopUpGoal" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div class="bg-cardSurface w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl">
         <div class="flex justify-between items-center mb-6">
@@ -235,7 +213,6 @@
       </div>
     </div>
 
-    <!-- Новая цель -->
     <div v-if="showAddGoal" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div class="bg-cardSurface w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl">
         <div class="flex justify-between items-center mb-6">
@@ -255,7 +232,6 @@
       </div>
     </div>
 
-    <!-- Меню -->
     <div v-if="showMenu" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div class="bg-cardSurface w-full sm:max-w-md rounded-3xl p-6 shadow-2xl">
         <div class="flex justify-between items-center mb-6">
@@ -276,7 +252,6 @@
       </div>
     </div>
 
-    <!-- Кошельки -->
     <div v-if="showWallets" class="fixed inset-0 bg-bgPrimary z-50 overflow-y-auto">
       <div class="p-6">
         <div class="flex justify-between items-center mb-8">
@@ -285,25 +260,24 @@
         </div>
         <div class="space-y-4">
           <div v-for="wallet in wallets.filter(w => !w.isArchived)" :key="wallet.id" class="bg-cardSurface rounded-2xl p-5 shadow-lg">
-  <div class="flex items-center gap-4 mb-3">
-    <span class="text-3xl">{{ wallet.emoji }}</span>
-    <div class="flex-1"><p class="font-bold text-textPrimary text-lg">{{ wallet.name }}</p><p class="text-xs text-textSecondary">Начальный: {{ wallet.initialBalance }} ₽</p></div>
-  </div>
-  <div class="flex justify-between items-center mb-3">
-    <p class="text-textSecondary text-sm">Текущий баланс</p>
-    <p class="text-2xl font-bold" :class="getWalletBalance(wallet.name) >= 0 ? 'text-accentLilac' : 'text-red-500'">{{ getWalletBalance(wallet.name) }} ₽</p>
-  </div>
-  <div class="flex gap-2">
-    <button @click="openEditWallet(wallet)" class="flex-1 py-2 rounded-xl font-medium bg-blue-100 text-blue-600 text-sm">✏️ Изменить</button>
-    <button @click="archiveWallet(wallet.id)" class="w-10 py-2 rounded-xl font-medium bg-red-100 text-red-500 text-sm">🗑️</button>
-  </div>
-</div>
+            <div class="flex items-center gap-4 mb-3">
+              <span class="text-3xl">{{ wallet.emoji }}</span>
+              <div class="flex-1"><p class="font-bold text-textPrimary text-lg">{{ wallet.name }}</p><p class="text-xs text-textSecondary">Начальный: {{ wallet.initialBalance }} ₽</p></div>
+            </div>
+            <div class="flex justify-between items-center mb-3">
+              <p class="text-textSecondary text-sm">Текущий баланс</p>
+              <p class="text-2xl font-bold" :class="getWalletBalance(wallet.name) >= 0 ? 'text-accentLilac' : 'text-red-500'">{{ getWalletBalance(wallet.name) }} ₽</p>
+            </div>
+            <div class="flex gap-2">
+              <button @click="openEditWallet(wallet)" class="flex-1 py-2 rounded-xl font-medium bg-blue-100 text-blue-600 text-sm">✏️ Изменить</button>
+              <button @click="archiveWallet(wallet.id)" class="w-10 py-2 rounded-xl font-medium bg-red-100 text-red-500 text-sm">🗑️</button>
+            </div>
+          </div>
         </div>
         <button @click="showAddWallet = true" class="w-full bg-accentLilac text-white font-bold py-4 rounded-full mt-6">+ Добавить кошелек</button>
       </div>
     </div>
 
-    <!-- Создание кошелька -->
     <div v-if="showAddWallet" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div class="bg-cardSurface w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl">
         <div class="flex justify-between items-center mb-6">
@@ -326,23 +300,21 @@
       </div>
     </div>
 
-        <!-- Планирование бюджета -->
     <div v-if="showBudgetModal" class="fixed inset-0 bg-bgPrimary z-50 overflow-y-auto">
-      <div class="p-6 pb-20">
+      <div class="p-6 pb-32">
         <div class="flex justify-between items-center mb-6">
           <button @click="showBudgetModal = false" class="text-textSecondary text-2xl">&times;</button>
           <h2 class="text-xl font-bold text-textPrimary">Планирование</h2>
           <div class="w-8"></div>
         </div>
-
-        <!-- Переключатель месяцев -->
         <div class="flex items-center justify-between bg-cardSurface rounded-2xl p-3 mb-6">
           <button @click="changeMonth(-1)" class="w-10 h-10 rounded-full bg-bgPrimary flex items-center justify-center text-xl">←</button>
           <span class="font-bold text-textPrimary">{{ monthName }}</span>
           <button @click="changeMonth(1)" class="w-10 h-10 rounded-full bg-bgPrimary flex items-center justify-center text-xl">→</button>
         </div>
-
-        <!-- === УМНАЯ ШАПКА: МАТЕМАТИКА БЮДЖЕТА === -->
+        <div v-if="hasUnsavedChanges" class="bg-yellow-100 border border-yellow-300 rounded-2xl p-3 mb-4 text-center text-sm text-yellow-800 font-medium">
+          ⚠️ Есть несохраненные изменения. Не забудь нажать "Сохранить"!
+        </div>
         <div class="bg-accentLilacLight/30 rounded-2xl p-5 mb-6 border border-accentLilac/20">
           <div class="grid grid-cols-2 gap-4 mb-4 text-sm">
             <div>
@@ -354,29 +326,16 @@
               <p class="text-lg font-bold text-accentLilac">-{{ totalPlannedExpenses + totalPlannedGoals }} ₽</p>
             </div>
           </div>
-          
-          <!-- Прогресс-бар распределения -->
           <div class="w-full bg-gray-200 rounded-full h-3 mb-2 overflow-hidden">
-            <div class="h-3 rounded-full transition-all duration-500 bg-accentLilac" 
-                 :style="{ width: totalPlannedIncome > 0 ? Math.min(100, ((totalPlannedExpenses + totalPlannedGoals) / totalPlannedIncome) * 100) + '%' : '0%' }">
-            </div>
+            <div class="h-3 rounded-full transition-all duration-500 bg-accentLilac" :style="{ width: totalPlannedIncome > 0 ? Math.min(100, ((totalPlannedExpenses + totalPlannedGoals) / totalPlannedIncome) * 100) + '%' : '0%' }"></div>
           </div>
-          
           <div class="flex justify-between items-center pt-2 border-t border-accentLilac/20">
             <span class="text-sm font-semibold text-textPrimary">Свободно (не распределено):</span>
-            <span class="text-xl font-bold" :class="unallocated >= 0 ? 'text-incomeGreen' : 'text-red-500'">
-              {{ unallocated }} ₽
-            </span>
+            <span class="text-xl font-bold" :class="unallocated >= 0 ? 'text-incomeGreen' : 'text-red-500'">{{ unallocated }} ₽</span>
           </div>
-          <p class="text-xs text-textSecondary mt-2 text-center" v-if="unallocated === 0 && totalPlannedIncome > 0">
-            🎉 Идеально! Каждый рубль имеет свою цель.
-          </p>
+          <p class="text-xs text-textSecondary mt-2 text-center" v-if="unallocated === 0 && totalPlannedIncome > 0">🎉 Идеально! Каждый рубль имеет цель.</p>
         </div>
-
-        <!-- === БЛОК 1: ДОХОДЫ === -->
-        <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2">
-          <span></span> Доходы
-        </h3>
+        <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2"><span>💰</span> Доходы</h3>
         <div class="space-y-3 mb-6">
           <div v-for="cat in categories.filter(c => incomeCategoryNames.includes(c.name))" :key="cat.id" class="bg-cardSurface rounded-2xl p-4">
             <div class="flex items-center gap-3 mb-2">
@@ -384,19 +343,12 @@
               <p class="font-semibold text-textPrimary flex-1">{{ cat.name }}</p>
             </div>
             <div class="flex items-center gap-2">
-              <input :value="getPlan(cat.name)" @input="updateBudget(cat.name, $event.target.value)" type="number" placeholder="0" class="flex-1 text-base text-textPrimary bg-bgPrimary rounded-xl p-2 outline-none focus:ring-2 focus:ring-incomeGreen">
+              <input :value="getLocalPlan(cat.name)" @input="updateLocalPlan(cat.name, $event.target.value)" type="number" placeholder="0" class="flex-1 text-base text-textPrimary bg-bgPrimary rounded-xl p-2 outline-none focus:ring-2 focus:ring-incomeGreen">
               <span class="text-textSecondary">₽</span>
             </div>
           </div>
-          <div v-if="categories.filter(c => incomeCategoryNames.includes(c.name)).length === 0" class="text-sm text-textSecondary text-center py-2">
-            Нет категорий доходов. Создайте "Зарплата" или "Подработка".
-          </div>
         </div>
-
-        <!-- === БЛОК 2: МЕЧТЫ (НАКОПЛЕНИЯ) === -->
-        <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2">
-          <span>✨</span> Мечты (отложить в этом месяце)
-        </h3>
+        <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2"><span>✨</span> Мечты (отложить)</h3>
         <div class="space-y-3 mb-6">
           <div v-for="goal in goals.filter(g => !g.isArchived)" :key="goal.id" class="bg-cardSurface rounded-2xl p-4 border-l-4" :style="{ borderLeftColor: `#${goal.colorHex}` }">
             <div class="flex items-center gap-3 mb-2">
@@ -405,38 +357,36 @@
               <span class="text-xs text-textSecondary">Цель: {{ goal.targetAmount }} ₽</span>
             </div>
             <div class="flex items-center gap-2">
-              <input :value="getPlan(goal.name)" @input="updateBudget(goal.name, $event.target.value)" type="number" placeholder="0" class="flex-1 text-base text-textPrimary bg-bgPrimary rounded-xl p-2 outline-none focus:ring-2 focus:ring-accentLilac">
+              <input :value="getLocalPlan(goal.name)" @input="updateLocalPlan(goal.name, $event.target.value)" type="number" placeholder="0" class="flex-1 text-base text-textPrimary bg-bgPrimary rounded-xl p-2 outline-none focus:ring-2 focus:ring-accentLilac">
               <span class="text-textSecondary">₽</span>
             </div>
           </div>
-          <div v-if="goals.filter(g => !g.isArchived).length === 0" class="text-sm text-textSecondary text-center py-2">
-            Нет активных мечт.
-          </div>
         </div>
-
-        <!-- === БЛОК 3: РАСХОДЫ === -->
-        <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2">
-          <span></span> Расходы
-        </h3>
-        <div class="space-y-3">
+        <h3 class="font-bold text-textPrimary text-lg mb-3 flex items-center gap-2"><span>🛒</span> Расходы</h3>
+        <div class="space-y-3 mb-20">
           <div v-for="cat in categories.filter(c => !incomeCategoryNames.includes(c.name) && !c.isHidden)" :key="cat.id" class="bg-cardSurface rounded-2xl p-4">
             <div class="flex items-center gap-3 mb-2">
               <span class="text-xl">{{ cat.emoji }}</span>
               <p class="font-semibold text-textPrimary flex-1">{{ cat.name }}</p>
             </div>
             <div class="flex items-center gap-2 mb-2">
-              <input :value="getPlan(cat.name)" @input="updateBudget(cat.name, $event.target.value)" type="number" placeholder="0" class="flex-1 text-base text-textPrimary bg-bgPrimary rounded-xl p-2 outline-none focus:ring-2 focus:ring-accentLilac">
+              <input :value="getLocalPlan(cat.name)" @input="updateLocalPlan(cat.name, $event.target.value)" type="number" placeholder="0" class="flex-1 text-base text-textPrimary bg-bgPrimary rounded-xl p-2 outline-none focus:ring-2 focus:ring-accentLilac">
               <span class="text-textSecondary">₽</span>
             </div>
             <div class="flex justify-between text-xs text-textSecondary px-1">
               <span>Потрачено: {{ getCategorySpent(cat.name) }} ₽</span>
-              <span :class="getPlan(cat.name) - getCategorySpent(cat.name) < 0 ? 'text-red-500 font-bold' : 'text-incomeGreen font-bold'">
-                Остаток: {{ getPlan(cat.name) - getCategorySpent(cat.name) }} ₽
+              <span :class="getLocalPlan(cat.name) - getCategorySpent(cat.name) < 0 ? 'text-red-500 font-bold' : 'text-incomeGreen font-bold'">
+                Остаток: {{ getLocalPlan(cat.name) - getCategorySpent(cat.name) }} ₽
               </span>
             </div>
           </div>
         </div>
-
+        <div class="fixed bottom-0 left-0 right-0 p-4 bg-bgPrimary border-t border-gray-200 z-10">
+          <button @click="saveAllPlans" :disabled="!hasUnsavedChanges" class="w-full bg-accentLilac text-white font-bold py-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed shadow-lg flex items-center justify-center gap-2">
+            <span v-if="hasUnsavedChanges">💾 Сохранить план</span>
+            <span v-else>✓ Все сохранено</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -456,7 +406,6 @@ ChartJS.register(ArcElement, Tooltip, Legend)
 const user = ref(null)
 const userName = computed(() => user.value?.displayName || user.value?.email?.split('@')[0] || 'Пользователь')
 
-// UI State
 const showAddModal = ref(false)
 const showAddCategory = ref(false)
 const showMenu = ref(false)
@@ -467,8 +416,8 @@ const showAddGoal = ref(false)
 const showTopUpGoal = ref(false)
 const editingTransactionId = ref(null)
 const expandedCats = ref([])
+const editingWalletId = ref(null)
 
-// Transaction State
 const newAmount = ref('')
 const newCategory = ref('Продукты')
 const newWallet = ref('')
@@ -477,18 +426,17 @@ const newComment = ref('')
 const transferFrom = ref('')
 const transferTo = ref('')
 
-// Data
 const transactions = ref([])
 const categories = ref([])
 const wallets = ref([])
 const goals = ref([])
 
-// Budget State
 const showBudgetModal = ref(false)
 const selectedMonth = ref(new Date().toISOString().slice(0, 7))
 const budgets = ref([])
+const localPlans = ref({})
+const hasUnsavedChanges = ref(false)
 
-// Category/Wallet/Goal creation state
 const newCategoryName = ref('')
 const newCategoryEmoji = ref('✨')
 const newCategoryColor = ref('F4E1E6')
@@ -504,11 +452,10 @@ const currentGoal = ref(null)
 const topUpAmount = ref('')
 const topUpWallet = ref('')
 
-const emojiOptions = ['🛒', '☕️', '🚗', '', '💰', '👦', '🏠', '⛽️', '🍔', '🎙️', '🎮', '🏕️', '✈️', '💊', '💃', '🐾', '↔']
-const walletEmojiOptions = ['🅰️', '', '💳', '💰', '', '💎']
+const emojiOptions = ['🛒', '☕️', '🚗', '👗', '💰', '👦🏻', '🏠', '⛽️', '🍔', '🎙️', '🎮', '🏕️', '✈️', '💊', '💃', '🐾', '↔']
+const walletEmojiOptions = ['🅰️', '💵', '💳', '💰', '👛', '💎']
 const colorOptions = ['F4E1E6', 'fadadd', 'D9A8BA', 'C4B5D4', 'B8C8D8', 'A8C8C8', 'C8B8D4', 'B8D4E8', 'F4B896', 'F5E6E8', 'F5E6C8', 'E5EFE2', 'FADADD', 'C8D8E8', 'D4A8A8', 'F0E6D2', 'D4E8E0', 'A89888', '88C4C0', 'A8C8E0', 'A86878', '1E3A5F', '6B5868', 'B8A898', '4A88C0', 'F0B8C0']
 
-// === HELPERS ===
 function getCategoryEmoji(name) {
   const cat = categories.value.find(c => c.name === name)
   return cat?.emoji || '📦'
@@ -531,19 +478,13 @@ function getWalletBalance(walletName) {
   return wallet.initialBalance + income - expense - transfersOut + transfersIn
 }
 
-// === COMPUTED ===
 const totalIncome = computed(() => transactions.value.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0))
 const totalExpenses = computed(() => transactions.value.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0))
 
 const remaining = computed(() => {
-  return wallets.value
-    .filter(w => w.includeInTotal !== false)
-    .reduce((sum, w) => sum + getWalletBalance(w.name), 0)
+  return wallets.value.filter(w => w.includeInTotal !== false).reduce((sum, w) => sum + getWalletBalance(w.name), 0)
 })
 
-// === ПЛАНИРОВАНИЕ БЮДЖЕТА (УМНАЯ МАТЕМАТИКА) ===
-
-// Упрощённый список категорий доходов
 const incomeCategoryNames = ['Зарплата', 'Другое']
 
 const monthName = computed(() => {
@@ -552,90 +493,24 @@ const monthName = computed(() => {
   return months[date.getMonth()] + ' ' + date.getFullYear()
 })
 
-function changeMonth(delta) {
-  const date = new Date(selectedMonth.value + '-01')
-  date.setMonth(date.getMonth() + delta)
-  selectedMonth.value = date.toISOString().slice(0, 7)
-}
-
-function getCategorySpent(categoryName) {
-  const [year, month] = selectedMonth.value.split('-').map(Number)
-  return transactions.value
-    .filter(t => {
-      if (t.type !== 'expense' || t.categoryName !== categoryName) return false
-      const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
-      return date.getMonth() === month - 1 && date.getFullYear() === year
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
-}
-
-// Получаем план для категории (ОБЪЯВЛЕНО ДО groupedTransactions!)
-function getPlan(name) {
-  if (!budgets.value) return 0
-  const budget = budgets.value.find(b => 
-    b.categoryName === name && b.month === selectedMonth.value
-  )
+function getLocalPlan(name) {
+  if (localPlans.value[name] !== undefined) return localPlans.value[name]
+  const budget = budgets.value.find(b => b.categoryName === name && b.month === selectedMonth.value)
   return budget ? budget.plannedAmount : 0
 }
 
-// === АВТОМАТИЧЕСКИЙ РАСЧЕТ БЮДЖЕТА ===
-const totalPlannedIncome = computed(() => {
-  return categories.value
-    .filter(c => incomeCategoryNames.includes(c.name))
-    .reduce((sum, c) => sum + getPlan(c.name), 0)
-})
-
-const totalPlannedExpenses = computed(() => {
-  return categories.value
-    .filter(c => !incomeCategoryNames.includes(c.name) && !c.isHidden)
-    .reduce((sum, c) => sum + getPlan(c.name), 0)
-})
-
-const totalPlannedGoals = computed(() => {
-  return goals.value
-    .filter(g => !g.isArchived)
-    .reduce((sum, g) => sum + getPlan(g.name), 0)
-})
-
-// Свободные средства = Доходы - Расходы - Мечты
-const unallocated = computed(() => {
-  return totalPlannedIncome.value - totalPlannedExpenses.value - totalPlannedGoals.value
-})
-
-// Группировка транзакций (после getPlan!)
-const groupedTransactions = computed(() => {
-  const groups = {}
-  const [year, month] = selectedMonth.value.split('-').map(Number)
-  
-  transactions.value.forEach(t => {
-    if (t.type !== 'expense') return 
-    const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
-    if (date.getMonth() !== month - 1 || date.getFullYear() !== year) return
-
-    const catName = t.categoryName || 'Без категории'
-    if (!groups[catName]) {
-      groups[catName] = { name: catName, emoji: getCategoryEmoji(catName), total: 0, planned: getPlan(catName), items: [] }
-    }
-    groups[catName].total += t.amount
-    groups[catName].items.push(t)
-  })
-  
-  return Object.values(groups).sort((a, b) => {
-    if (a.planned > 0 && b.planned === 0) return -1
-    if (a.planned === 0 && b.planned > 0) return 1
-    return b.total - a.total
-  })
-})
+const totalPlannedIncome = computed(() => categories.value.filter(c => incomeCategoryNames.includes(c.name)).reduce((sum, c) => sum + getLocalPlan(c.name), 0))
+const totalPlannedExpenses = computed(() => categories.value.filter(c => !incomeCategoryNames.includes(c.name) && !c.isHidden).reduce((sum, c) => sum + getLocalPlan(c.name), 0))
+const totalPlannedGoals = computed(() => goals.value.filter(g => !g.isArchived).reduce((sum, g) => sum + getLocalPlan(g.name), 0))
+const unallocated = computed(() => totalPlannedIncome.value - totalPlannedExpenses.value - totalPlannedGoals.value)
 
 const chartData = computed(() => {
   const [year, month] = selectedMonth.value.split('-').map(Number)
-  
   const expenses = transactions.value.filter(t => {
     if (t.type !== 'expense') return false
     const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
     return date.getMonth() === month - 1 && date.getFullYear() === year
   })
-  
   const grouped = {}
   expenses.forEach(t => { 
     const key = t.categoryName || 'Без категории'
@@ -658,41 +533,93 @@ const chartOptions = {
   }
 }
 
-// Сохранение плана
-const updateBudget = async (name, amount) => {
-  if (!user.value) return
-  const existing = budgets.value.find(b => b.categoryName === name)
-  const numAmount = Number(amount) || 0
-  
-  try {
-    if (existing) {
-      await updateDoc(doc(db, 'budgets', existing.id), { plannedAmount: numAmount })
-    } else {
-      await addDoc(collection(db, 'budgets'), {
-        userId: user.value.uid,
-        month: selectedMonth.value,
-        categoryName: name,
-        plannedAmount: numAmount
-      })
+const groupedTransactions = computed(() => {
+  const groups = {}
+  const [year, month] = selectedMonth.value.split('-').map(Number)
+  transactions.value.forEach(t => {
+    if (t.type !== 'expense') return 
+    const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
+    if (date.getMonth() !== month - 1 || date.getFullYear() !== year) return
+    const catName = t.categoryName || 'Без категории'
+    if (!groups[catName]) {
+      groups[catName] = { name: catName, emoji: getCategoryEmoji(catName), total: 0, planned: getLocalPlan(catName), items: [] }
     }
-  } catch (error) { console.error('Ошибка сохранения плана:', error) }
+    groups[catName].total += t.amount
+    groups[catName].items.push(t)
+  })
+  return Object.values(groups).sort((a, b) => {
+    if (a.planned > 0 && b.planned === 0) return -1
+    if (a.planned === 0 && b.planned > 0) return 1
+    return b.total - a.total
+  })
+})
+
+function changeMonth(delta) {
+  if (hasUnsavedChanges.value) {
+    if (!confirm('У вас есть несохраненные изменения. Сохранить перед переходом?')) return
+    saveAllPlansSync()
+  }
+  const date = new Date(selectedMonth.value + '-01')
+  date.setMonth(date.getMonth() + delta)
+  selectedMonth.value = date.toISOString().slice(0, 7)
+  localPlans.value = {}
+  hasUnsavedChanges.value = false
+}
+
+function updateLocalPlan(name, amount) {
+  localPlans.value[name] = Number(amount) || 0
+  hasUnsavedChanges.value = true
+}
+
+function getCategorySpent(categoryName) {
+  const [year, month] = selectedMonth.value.split('-').map(Number)
+  return transactions.value.filter(t => {
+    if (t.type !== 'expense' || t.categoryName !== categoryName) return false
+    const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
+    return date.getMonth() === month - 1 && date.getFullYear() === year
+  }).reduce((sum, t) => sum + t.amount, 0)
+}
+
+const saveAllPlans = async () => {
+  if (!user.value || !hasUnsavedChanges.value) return
+  const changes = Object.entries(localPlans.value)
+  try {
+    for (const [name, amount] of changes) {
+      const existing = budgets.value.find(b => b.categoryName === name && b.month === selectedMonth.value)
+      if (existing) {
+        await updateDoc(doc(db, 'budgets', existing.id), { plannedAmount: amount })
+      } else {
+        await addDoc(collection(db, 'budgets'), { userId: user.value.uid, month: selectedMonth.value, categoryName: name, plannedAmount: amount })
+      }
+    }
+    const q = query(collection(db, 'budgets'), where('userId', '==', user.value.uid), where('month', '==', selectedMonth.value))
+    onSnapshot(q, (snapshot) => { budgets.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) })
+    localPlans.value = {}
+    hasUnsavedChanges.value = false
+    alert('✅ План успешно сохранен!')
+  } catch (error) {
+    console.error('Ошибка сохранения:', error)
+    alert('Ошибка при сохранении: ' + error.message)
+  }
+}
+
+const saveAllPlansSync = async () => {
+  if (!user.value || !hasUnsavedChanges.value) return
+  const changes = Object.entries(localPlans.value)
+  for (const [name, amount] of changes) {
+    const existing = budgets.value.find(b => b.categoryName === name && b.month === selectedMonth.value)
+    if (existing) await updateDoc(doc(db, 'budgets', existing.id), { plannedAmount: amount })
+    else await addDoc(collection(db, 'budgets'), { userId: user.value.uid, month: selectedMonth.value, categoryName: name, plannedAmount: amount })
+  }
+  localPlans.value = {}
+  hasUnsavedChanges.value = false
 }
 
 watch(selectedMonth, () => {
   if (!user.value) return
   const q = query(collection(db, 'budgets'), where('userId', '==', user.value.uid), where('month', '==', selectedMonth.value))
-  onSnapshot(q, (snapshot) => {
-    budgets.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-  })
+  onSnapshot(q, (snapshot) => { budgets.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) })
 }, { immediate: true })
-
-// === ACTIONS ===
-function setType(type) {
-  newType.value = type
-  if (type === 'income') newCategory.value = 'Зарплата'
-  else if (type === 'expense') newCategory.value = 'Продукты'
-  else if (type === 'transfer') { transferFrom.value = ''; transferTo.value = '' }
-}
 
 function toggleCat(catName) {
   if (expandedCats.value.includes(catName)) {
@@ -700,6 +627,13 @@ function toggleCat(catName) {
   } else {
     expandedCats.value.push(catName)
   }
+}
+
+function setType(type) {
+  newType.value = type
+  if (type === 'income') newCategory.value = 'Зарплата'
+  else if (type === 'expense') newCategory.value = 'Продукты'
+  else if (type === 'transfer') { transferFrom.value = ''; transferTo.value = '' }
 }
 
 function openAddModal() {
@@ -736,18 +670,13 @@ const saveTransaction = async () => {
   if (newType.value === 'transfer') {
     if (!newAmount.value || newAmount.value <= 0 || !transferFrom.value || !transferTo.value || transferFrom.value === transferTo.value || !user.value) return
     try {
-      await addDoc(collection(db, 'transactions'), {
-        amount: Number(newAmount.value), type: 'transfer', walletName: transferFrom.value, transferTo: transferTo.value,
-        categoryName: `Перевод на ${transferTo.value}`, comment: newComment.value, userId: user.value.uid, date: new Date()
-      })
+      await addDoc(collection(db, 'transactions'), { amount: Number(newAmount.value), type: 'transfer', walletName: transferFrom.value, transferTo: transferTo.value, categoryName: `Перевод на ${transferTo.value}`, comment: newComment.value, userId: user.value.uid, date: new Date() })
       closeModal()
     } catch (error) { console.error('Ошибка перевода:', error); alert('Ошибка: ' + error.message) }
     return
   }
-
   if (!newAmount.value || newAmount.value <= 0 || !newCategory.value || !newWallet.value || !user.value) return
   const transactionData = { amount: Number(newAmount.value), categoryName: newCategory.value, walletName: newWallet.value, type: newType.value, comment: newComment.value, userId: user.value.uid, date: new Date() }
-
   try {
     if (editingTransactionId.value) await updateDoc(doc(db, 'transactions', editingTransactionId.value), transactionData)
     else await addDoc(collection(db, 'transactions'), transactionData)
@@ -763,38 +692,6 @@ const createCategory = async () => {
   } catch (error) { console.error('Ошибка создания категории:', error) }
 }
 
-const createWallet = async () => {
-  if (!newWalletName.value || !user.value) return
-  try {
-    if (editingWalletId.value) {
-      await updateDoc(doc(db, 'wallets', editingWalletId.value), {
-        name: newWalletName.value,
-        emoji: newWalletEmoji.value,
-        initialBalance: Number(newWalletBalance.value) || 0,
-        includeInTotal: includeInTotal.value
-      })
-      editingWalletId.value = null
-    } else {
-      await addDoc(collection(db, 'wallets'), {
-        name: newWalletName.value,
-        emoji: newWalletEmoji.value,
-        colorHex: 'A594B6',
-        initialBalance: Number(newWalletBalance.value) || 0,
-        isArchived: false,
-        includeInTotal: includeInTotal.value,
-        userId: user.value.uid
-      })
-    }
-    newWalletName.value = ''
-    newWalletBalance.value = '0'
-    newWalletEmoji.value = '💳'
-    includeInTotal.value = true
-    showAddWallet.value = false
-  } catch (error) { console.error('Ошибка сохранения кошелька:', error) }
-}
-
-const editingWalletId = ref(null)
-
 function openEditWallet(wallet) {
   editingWalletId.value = wallet.id
   newWalletName.value = wallet.name
@@ -806,9 +703,24 @@ function openEditWallet(wallet) {
 
 const archiveWallet = async (id) => {
   if (!confirm('Архивировать этот кошелек?')) return
+  try { await updateDoc(doc(db, 'wallets', id), { isArchived: true }) } catch (error) { console.error('Ошибка архивации:', error) }
+}
+
+const createWallet = async () => {
+  if (!newWalletName.value || !user.value) return
   try {
-    await updateDoc(doc(db, 'wallets', id), { isArchived: true })
-  } catch (error) { console.error('Ошибка архивации:', error) }
+    if (editingWalletId.value) {
+      await updateDoc(doc(db, 'wallets', editingWalletId.value), { name: newWalletName.value, emoji: newWalletEmoji.value, initialBalance: Number(newWalletBalance.value) || 0, includeInTotal: includeInTotal.value })
+      editingWalletId.value = null
+    } else {
+      await addDoc(collection(db, 'wallets'), { name: newWalletName.value, emoji: newWalletEmoji.value, colorHex: 'A594B6', initialBalance: Number(newWalletBalance.value) || 0, isArchived: false, includeInTotal: includeInTotal.value, userId: user.value.uid })
+    }
+    newWalletName.value = ''
+    newWalletBalance.value = '0'
+    newWalletEmoji.value = '💳'
+    includeInTotal.value = true
+    showAddWallet.value = false
+  } catch (error) { console.error('Ошибка сохранения кошелька:', error) }
 }
 
 function openTopUpGoal(goal) {
@@ -843,7 +755,6 @@ const deleteTransaction = async (id) => {
   try { await deleteDoc(doc(db, 'transactions', id)) } catch (error) { console.error('Ошибка удаления:', error) }
 }
 
-// === INIT ===
 onMounted(() => {
   onAuthStateChanged(auth, (currentUser) => {
     user.value = currentUser
