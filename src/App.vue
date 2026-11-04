@@ -621,6 +621,17 @@ watch(selectedMonth, () => {
   onSnapshot(q, (snapshot) => { budgets.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) })
 }, { immediate: true })
 
+// Загружаем планы при открытии модалки планирования
+watch(showBudgetModal, (isOpen) => {
+  if (isOpen && user.value) {
+    const q = query(collection(db, 'budgets'), where('userId', '==', user.value.uid), where('month', '==', selectedMonth.value))
+    onSnapshot(q, (snapshot) => {
+      budgets.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      console.log('📥 Загружено планов:', budgets.value.length)
+    })
+  }
+})
+
 function toggleCat(catName) {
   if (expandedCats.value.includes(catName)) {
     expandedCats.value = expandedCats.value.filter(n => n !== catName)
