@@ -478,9 +478,27 @@ function getWalletBalance(walletName) {
   return wallet.initialBalance + income - expense - transfersOut + transfersIn
 }
 
-const totalIncome = computed(() => transactions.value.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0))
-const totalExpenses = computed(() => transactions.value.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0))
+const totalIncome = computed(() => {
+  const [year, month] = selectedMonth.value.split('-').map(Number)
+  return transactions.value
+    .filter(t => {
+      if (t.type !== 'income') return false
+      const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
+      return date.getMonth() === month - 1 && date.getFullYear() === year
+    })
+    .reduce((sum, t) => sum + t.amount, 0)
+})
 
+const totalExpenses = computed(() => {
+  const [year, month] = selectedMonth.value.split('-').map(Number)
+  return transactions.value
+    .filter(t => {
+      if (t.type !== 'expense') return false
+      const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
+      return date.getMonth() === month - 1 && date.getFullYear() === year
+    })
+    .reduce((sum, t) => sum + t.amount, 0)
+})
 const remaining = computed(() => {
   return wallets.value.filter(w => w.includeInTotal !== false).reduce((sum, w) => sum + getWalletBalance(w.name), 0)
 })
