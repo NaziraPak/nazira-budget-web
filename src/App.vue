@@ -25,11 +25,11 @@
       </div>
       <div class="grid grid-cols-2 gap-4">
         <div class="bg-accentLilacLight/50 rounded-2xl p-3 text-center">
-          <p class="text-xs text-textSecondary mb-1">Доходы</p>
+          <p class="text-xs text-textSecondary mb-1">Доходы ({{ monthName }})</p>
           <p class="text-lg font-bold text-incomeGreen">+{{ totalIncome }} ₽</p>
         </div>
         <div class="bg-accentLilacLight/50 rounded-2xl p-3 text-center">
-          <p class="text-xs text-textSecondary mb-1">Расходы</p>
+          <p class="text-xs text-textSecondary mb-1">Расходы ({{ monthName }})</p>
           <p class="text-lg font-bold text-accentLilac">-{{ totalExpenses }} ₽</p>
         </div>
       </div>
@@ -66,6 +66,13 @@
           <div v-if="cat.planned > 0" class="w-full bg-gray-200 rounded-full h-2 mt-3 overflow-hidden">
             <div class="h-2 rounded-full transition-all duration-500" :class="cat.total > cat.planned ? 'bg-red-500' : 'bg-accentLilac'" :style="{ width: Math.min(100, (cat.total / cat.planned) * 100) + '%' }"></div>
           </div>
+          <div v-if="cat.planned > 0" class="flex justify-between text-xs text-textSecondary mt-1">
+            <span>План: {{ cat.planned }} ₽</span>
+            <span :class="cat.planned - cat.total < 0 ? 'text-red-500' : 'text-incomeGreen'">Осталось: {{ cat.planned - cat.total }} ₽</span>
+          </div>
+          <div v-else-if="cat.total > 0" class="mt-2 text-xs text-red-500 font-semibold bg-red-50 p-2 rounded-lg text-center">
+            ⚠️ Без плана: потрачено {{ cat.total }} ₽
+          </div>
 
           <div v-if="expandedCats.includes(cat.name)" class="mt-4 space-y-2 border-t border-gray-100 pt-3">
             <div v-for="t in cat.items" :key="t.id" class="flex justify-between items-center text-sm">
@@ -100,47 +107,52 @@
           <label class="block text-sm text-textSecondary mb-1">{{ newType === 'expense' ? 'Сколько потратили?' : 'Сколько получили?' }}</label>
           <input v-model="newAmount" type="number" placeholder="0" class="w-full text-3xl font-bold text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac">
         </div>
+        
         <div v-if="newType !== 'transfer'" class="mb-6">
           <label class="block text-sm text-textSecondary mb-2">Кошелек</label>
-          <div class="flex gap-3 overflow-x-auto pb-2">
-            <button v-for="wallet in wallets.filter(w => !w.isArchived)" :key="wallet.id" @click="newWallet = wallet.name" :class="newWallet === wallet.name ? 'text-white' : 'text-textPrimary'" :style="{ backgroundColor: newWallet === wallet.name ? `#${wallet.colorHex}` : '#F7F4FA' }" class="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold transition min-w-[120px]">
-              <span class="text-xl">{{ wallet.emoji }}</span><span class="text-sm">{{ wallet.name }}</span>
-            </button>
-          </div>
+          <select v-model="newWallet" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac appearance-none">
+            <option value="" disabled>Выберите кошелек</option>
+            <option v-for="wallet in sortedWallets" :key="wallet.id" :value="wallet.name">
+              {{ wallet.emoji }} {{ wallet.name }}
+            </option>
+          </select>
         </div>
+
         <div v-if="newType !== 'transfer'" class="mb-6">
           <div class="flex justify-between items-center mb-2">
             <label class="text-sm text-textSecondary">Категория</label>
             <button @click="showAddCategory = true" class="text-sm font-medium text-accentLilac">+ Новая</button>
           </div>
-          <div class="flex gap-3 overflow-x-auto pb-2">
-            <button v-for="cat in categories.filter(c => !c.isHidden)" :key="cat.id" @click="newCategory = cat.name" :class="newCategory === cat.name ? 'text-white' : 'text-textPrimary'" :style="{ backgroundColor: newCategory === cat.name ? `#${cat.colorHex}` : '#F7F4FA' }" class="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold transition min-w-[120px]">
-              <span class="text-xl">{{ cat.emoji }}</span><span class="text-sm">{{ cat.name }}</span>
-            </button>
-          </div>
+          <select v-model="newCategory" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac appearance-none">
+            <option value="" disabled>Выберите категорию</option>
+            <option v-for="cat in sortedCategories" :key="cat.id" :value="cat.name">
+              {{ cat.emoji }} {{ cat.name }}
+            </option>
+          </select>
         </div>
+
         <div class="mb-6">
           <label class="block text-sm text-textSecondary mb-1">Комментарий (необязательно)</label>
           <input v-model="newComment" type="text" placeholder="Например: обед с коллегами" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac">
         </div>
+
         <div v-if="newType === 'transfer'" class="space-y-4 mb-6">
           <div>
             <label class="block text-sm text-textSecondary mb-2">Откуда</label>
-            <div class="flex gap-3 overflow-x-auto pb-2">
-              <button v-for="wallet in wallets.filter(w => !w.isArchived)" :key="wallet.id" @click="transferFrom = wallet.name" :class="transferFrom === wallet.name ? 'text-white' : 'text-textPrimary'" :style="{ backgroundColor: transferFrom === wallet.name ? `#${wallet.colorHex}` : '#F7F4FA' }" class="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold transition min-w-[120px]">
-                <span class="text-xl">{{ wallet.emoji }}</span><span class="text-sm">{{ wallet.name }}</span>
-              </button>
-            </div>
+            <select v-model="transferFrom" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac appearance-none">
+              <option value="" disabled>Откуда</option>
+              <option v-for="wallet in sortedWallets" :key="wallet.id" :value="wallet.name">{{ wallet.emoji }} {{ wallet.name }}</option>
+            </select>
           </div>
           <div>
             <label class="block text-sm text-textSecondary mb-2">Куда</label>
-            <div class="flex gap-3 overflow-x-auto pb-2">
-              <button v-for="wallet in wallets.filter(w => !w.isArchived && w.name !== transferFrom)" :key="wallet.id" @click="transferTo = wallet.name" :class="transferTo === wallet.name ? 'text-white' : 'text-textPrimary'" :style="{ backgroundColor: transferTo === wallet.name ? `#${wallet.colorHex}` : '#F7F4FA' }" class="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold transition min-w-[120px]">
-                <span class="text-xl">{{ wallet.emoji }}</span><span class="text-sm">{{ wallet.name }}</span>
-              </button>
-            </div>
+            <select v-model="transferTo" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac appearance-none">
+              <option value="" disabled>Куда</option>
+              <option v-for="wallet in sortedWallets.filter(w => w.name !== transferFrom)" :key="wallet.id" :value="wallet.name">{{ wallet.emoji }} {{ wallet.name }}</option>
+            </select>
           </div>
         </div>
+
         <button @click="saveTransaction" :disabled="!newAmount || newAmount <= 0 || (newType !== 'transfer' && (!newWallet || !newCategory)) || (newType === 'transfer' && (!transferFrom || !transferTo || transferFrom === transferTo))" class="w-full bg-accentLilac text-white font-bold py-4 rounded-2xl mt-4 disabled:opacity-50 disabled:cursor-not-allowed">
           {{ editingTransactionId ? 'Сохранить' : (newType === 'expense' ? 'Сохранить расход' : newType === 'income' ? 'Сохранить доход' : 'Перевести') }}
         </button>
@@ -203,11 +215,10 @@
         <div class="mb-6"><label class="block text-sm text-textSecondary mb-1">Сумма пополнения</label><input v-model="topUpAmount" type="number" placeholder="0" class="w-full text-3xl font-bold text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac"></div>
         <div class="mb-6">
           <label class="block text-sm text-textSecondary mb-2">Списать с кошелька:</label>
-          <div class="flex gap-3 overflow-x-auto pb-2">
-            <button v-for="wallet in wallets.filter(w => !w.isArchived)" :key="wallet.id" @click="topUpWallet = wallet.name" :class="topUpWallet === wallet.name ? 'text-white' : 'text-textPrimary'" :style="{ backgroundColor: topUpWallet === wallet.name ? `#${wallet.colorHex}` : '#F7F4FA' }" class="flex-shrink-0 flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold transition min-w-[120px]">
-              <span class="text-xl">{{ wallet.emoji }}</span><span class="text-sm">{{ wallet.name }}</span>
-            </button>
-          </div>
+          <select v-model="topUpWallet" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac appearance-none">
+            <option value="" disabled>Выберите кошелек</option>
+            <option v-for="wallet in sortedWallets" :key="wallet.id" :value="wallet.name">{{ wallet.emoji }} {{ wallet.name }}</option>
+          </select>
         </div>
         <button @click="topUpGoal" :disabled="!topUpAmount || topUpAmount <= 0 || !topUpWallet" class="w-full bg-accentLilac text-white font-bold py-4 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed">Пополнить и списать</button>
       </div>
@@ -259,7 +270,7 @@
           <button @click="showWallets = false" class="text-textSecondary text-2xl">&times;</button>
         </div>
         <div class="space-y-4">
-          <div v-for="wallet in wallets.filter(w => !w.isArchived)" :key="wallet.id" class="bg-cardSurface rounded-2xl p-5 shadow-lg">
+          <div v-for="wallet in sortedWallets" :key="wallet.id" class="bg-cardSurface rounded-2xl p-5 shadow-lg">
             <div class="flex items-center gap-4 mb-3">
               <span class="text-3xl">{{ wallet.emoji }}</span>
               <div class="flex-1"><p class="font-bold text-textPrimary text-lg">{{ wallet.name }}</p><p class="text-xs text-textSecondary">Начальный: {{ wallet.initialBalance }} ₽</p></div>
@@ -478,37 +489,33 @@ function getWalletBalance(walletName) {
   return wallet.initialBalance + income - expense - transfersOut + transfersIn
 }
 
-const totalIncome = computed(() => {
-  const [year, month] = selectedMonth.value.split('-').map(Number)
-  return transactions.value
-    .filter(t => {
-      if (t.type !== 'income') return false
-      const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
-      return date.getMonth() === month - 1 && date.getFullYear() === year
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
-})
-
-const totalExpenses = computed(() => {
-  const [year, month] = selectedMonth.value.split('-').map(Number)
-  return transactions.value
-    .filter(t => {
-      if (t.type !== 'expense') return false
-      const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
-      return date.getMonth() === month - 1 && date.getFullYear() === year
-    })
-    .reduce((sum, t) => sum + t.amount, 0)
-})
-const remaining = computed(() => {
-  return wallets.value.filter(w => w.includeInTotal !== false).reduce((sum, w) => sum + getWalletBalance(w.name), 0)
-})
-
 const incomeCategoryNames = ['Зарплата', 'Другое']
 
 const monthName = computed(() => {
   const months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
   const date = new Date(selectedMonth.value + '-01')
   return months[date.getMonth()] + ' ' + date.getFullYear()
+})
+
+// Сортировка по частоте использования
+const sortedCategories = computed(() => {
+  const usageCount = {}
+  transactions.value.forEach(t => {
+    if (t.type === 'expense' && t.categoryName) {
+      usageCount[t.categoryName] = (usageCount[t.categoryName] || 0) + 1
+    }
+  })
+  return [...categories.value].filter(c => !c.isHidden).sort((a, b) => (usageCount[b.name] || 0) - (usageCount[a.name] || 0))
+})
+
+const sortedWallets = computed(() => {
+  const usageCount = {}
+  transactions.value.forEach(t => {
+    if (t.walletName) {
+      usageCount[t.walletName] = (usageCount[t.walletName] || 0) + 1
+    }
+  })
+  return [...wallets.value].filter(w => !w.isArchived).sort((a, b) => (usageCount[b.name] || 0) - (usageCount[a.name] || 0))
 })
 
 function getLocalPlan(name) {
@@ -521,6 +528,28 @@ const totalPlannedIncome = computed(() => categories.value.filter(c => incomeCat
 const totalPlannedExpenses = computed(() => categories.value.filter(c => !incomeCategoryNames.includes(c.name) && !c.isHidden).reduce((sum, c) => sum + getLocalPlan(c.name), 0))
 const totalPlannedGoals = computed(() => goals.value.filter(g => !g.isArchived).reduce((sum, g) => sum + getLocalPlan(g.name), 0))
 const unallocated = computed(() => totalPlannedIncome.value - totalPlannedExpenses.value - totalPlannedGoals.value)
+
+const totalIncome = computed(() => {
+  const [year, month] = selectedMonth.value.split('-').map(Number)
+  return transactions.value.filter(t => {
+    if (t.type !== 'income') return false
+    const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
+    return date.getMonth() === month - 1 && date.getFullYear() === year
+  }).reduce((sum, t) => sum + t.amount, 0)
+})
+
+const totalExpenses = computed(() => {
+  const [year, month] = selectedMonth.value.split('-').map(Number)
+  return transactions.value.filter(t => {
+    if (t.type !== 'expense') return false
+    const date = t.date?.toDate ? t.date.toDate() : new Date(t.date)
+    return date.getMonth() === month - 1 && date.getFullYear() === year
+  }).reduce((sum, t) => sum + t.amount, 0)
+})
+
+const remaining = computed(() => {
+  return wallets.value.filter(w => w.includeInTotal !== false).reduce((sum, w) => sum + getWalletBalance(w.name), 0)
+})
 
 const chartData = computed(() => {
   const [year, month] = selectedMonth.value.split('-').map(Number)
@@ -585,7 +614,9 @@ function changeMonth(delta) {
 }
 
 function updateLocalPlan(name, amount) {
-  localPlans.value[name] = Number(amount) || 0
+  const newPlans = { ...localPlans.value }
+  newPlans[name] = Number(amount) || 0
+  localPlans.value = newPlans
   hasUnsavedChanges.value = true
 }
 
@@ -639,13 +670,11 @@ watch(selectedMonth, () => {
   onSnapshot(q, (snapshot) => { budgets.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) })
 }, { immediate: true })
 
-// Загружаем планы при открытии модалки планирования
 watch(showBudgetModal, (isOpen) => {
   if (isOpen && user.value) {
     const q = query(collection(db, 'budgets'), where('userId', '==', user.value.uid), where('month', '==', selectedMonth.value))
     onSnapshot(q, (snapshot) => {
       budgets.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      console.log('📥 Загружено планов:', budgets.value.length)
     })
   }
 })
@@ -670,7 +699,7 @@ function openAddModal() {
   newAmount.value = ''
   newType.value = 'expense'
   newCategory.value = 'Продукты'
-  newWallet.value = wallets.value.length > 0 ? wallets.value[0].name : ''
+  newWallet.value = sortedWallets.value.length > 0 ? sortedWallets.value[0].name : ''
   newComment.value = ''
   showAddModal.value = true
 }
@@ -679,7 +708,7 @@ function openEditModal(transaction) {
   editingTransactionId.value = transaction.id
   newAmount.value = transaction.amount
   newType.value = transaction.type
-  newWallet.value = transaction.walletName || (wallets.value.length > 0 ? wallets.value[0].name : '')
+  newWallet.value = transaction.walletName || (sortedWallets.value.length > 0 ? sortedWallets.value[0].name : '')
   newCategory.value = transaction.categoryName || 'Продукты'
   newComment.value = transaction.comment || ''
   showAddModal.value = true
@@ -753,7 +782,7 @@ const createWallet = async () => {
 }
 
 function openTopUpGoal(goal) {
-  currentGoal.value = goal; topUpAmount.value = ''; topUpWallet.value = wallets.value.length > 0 ? wallets.value[0].name : ''; showTopUpGoal.value = true
+  currentGoal.value = goal; topUpAmount.value = ''; topUpWallet.value = sortedWallets.value.length > 0 ? sortedWallets.value[0].name : ''; showTopUpGoal.value = true
 }
 
 const topUpGoal = async () => {
@@ -796,6 +825,10 @@ onMounted(() => {
       })
       onSnapshot(query(collection(db, 'goals'), where('userId', '==', uid)), (s) => goals.value = s.docs.map(d => ({ id: d.id, ...d.data() })))
       onSnapshot(query(collection(db, 'transactions'), where('userId', '==', uid)), (s) => transactions.value = s.docs.map(d => ({ id: d.id, ...d.data() })))
+      
+      // Загружаем планы бюджета сразу при входе
+      const q = query(collection(db, 'budgets'), where('userId', '==', uid), where('month', '==', selectedMonth.value))
+      onSnapshot(q, (snapshot) => { budgets.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) })
     } else {
       transactions.value = []; categories.value = []; wallets.value = []; goals.value = []; budgets.value = []
     }
