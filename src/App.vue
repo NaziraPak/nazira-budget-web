@@ -9,7 +9,6 @@
       </div>
       <div class="flex gap-2">
         <button @click="showMenu = true" class="w-12 h-12 rounded-full bg-accentLilacLight flex items-center justify-center text-2xl">🐹</button>
-        <button @click="logout" class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-500 text-xl" title="Выйти">🚪</button>
       </div>
     </div>
 
@@ -89,6 +88,38 @@
           </div>
         </div>
       </div>
+
+          <!-- Экран управления категориями -->
+    <div v-if="showCategories" class="fixed inset-0 bg-bgPrimary z-50 overflow-y-auto">
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-8">
+          <h2 class="text-2xl font-bold text-textPrimary">Категории 🏷️</h2>
+          <button @click="showCategories = false" class="text-textSecondary text-2xl">&times;</button>
+        </div>
+        
+        <div class="space-y-3">
+          <div v-for="cat in categories" :key="cat.id" class="bg-cardSurface rounded-2xl p-4 flex items-center justify-between">
+            <div class="flex items-center gap-3 flex-1">
+              <span class="text-2xl">{{ cat.emoji }}</span>
+              <div>
+                <p class="font-semibold text-textPrimary">{{ cat.name }}</p>
+                <p class="text-xs" :class="cat.isHidden ? 'text-gray-400' : 'text-incomeGreen'">
+                  {{ cat.isHidden ? 'Скрыта (в архиве)' : 'Активна' }}
+                </p>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button @click="openEditCategory(cat)" class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 transition">✏️</button>
+              <button @click="toggleCategoryArchive(cat)" class="w-10 h-10 rounded-full transition" :class="cat.isHidden ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'">
+                {{ cat.isHidden ? '✓' : '🗑️' }}
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <button @click="editingCategoryId = null; showAddCategory = true; showCategories = false" class="w-full bg-accentLilac text-white font-bold py-4 rounded-full mt-6 shadow-lg">+ Добавить новую категорию</button>
+      </div>
+    </div>
     </div>
 
     <!-- МОДАЛЬНЫЕ ОКНА -->
@@ -121,7 +152,7 @@
         <div v-if="newType !== 'transfer'" class="mb-6">
           <div class="flex justify-between items-center mb-2">
             <label class="text-sm text-textSecondary">Категория</label>
-            <button @click="showAddCategory = true" class="text-sm font-medium text-accentLilac">+ Новая</button>
+            <button @click="editingCategoryId = null; showAddCategory = true" class="text-sm font-medium text-accentLilac">+ Новая</button>
           </div>
           <select v-model="newCategory" class="w-full text-base text-textPrimary bg-bgPrimary rounded-2xl p-4 outline-none focus:ring-2 focus:ring-accentLilac appearance-none">
             <option value="" disabled>Выберите категорию</option>
@@ -162,7 +193,7 @@
     <div v-if="showAddCategory" class="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50">
       <div class="bg-cardSurface w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl">
         <div class="flex justify-between items-center mb-6">
-          <h3 class="text-xl font-bold text-textPrimary">Новая категория</h3>
+          <h3 class="text-xl font-bold text-textPrimary">{{ editingCategoryId ? 'Редактировать категорию' : 'Новая категория' }}</h3>
           <button @click="showAddCategory = false" class="text-textSecondary text-2xl">&times;</button>
         </div>
         <div class="space-y-4">
@@ -258,6 +289,16 @@
           </button>
           <button @click="showBudgetModal = true; showMenu = false" class="w-full flex items-center gap-4 p-4 bg-bgPrimary rounded-2xl text-left">
             <span class="text-2xl">📊</span><div><p class="font-semibold text-textPrimary">Планирование</p><p class="text-xs text-textSecondary">Бюджет по категориям</p></div>
+          </button>
+          <button @click="showCategories = true; showMenu = false" class="w-full flex items-center gap-4 p-4 bg-bgPrimary rounded-2xl text-left">
+            <span class="text-2xl">🏷️</span><div><p class="font-semibold text-textPrimary">Категории</p><p class="text-xs text-textSecondary">Редактировать или скрыть</p></div>
+          </button>
+          <button @click="logout" class="w-full flex items-center gap-4 p-4 bg-red-50 rounded-2xl text-left mt-4 border border-red-100">
+            <span class="text-2xl">🚪</span>
+            <div>
+              <p class="font-semibold text-red-500">Выйти из аккаунта</p>
+              <p class="text-xs text-red-400">Завершить сеанс</p>
+              </div>
           </button>
         </div>
       </div>
@@ -421,6 +462,8 @@ const showAddModal = ref(false)
 const showAddCategory = ref(false)
 const showMenu = ref(false)
 const showWallets = ref(false)
+const showCategories = ref(false)
+const editingCategoryId = ref(null)
 const showAddWallet = ref(false)
 const showGoals = ref(false)
 const showAddGoal = ref(false)
@@ -745,9 +788,44 @@ const saveTransaction = async () => {
 const createCategory = async () => {
   if (!newCategoryName.value || !user.value) return
   try {
-    await addDoc(collection(db, 'categories'), { name: newCategoryName.value, emoji: newCategoryEmoji.value, colorHex: newCategoryColor.value, isHidden: false, userId: user.value.uid })
-    newCategory.value = newCategoryName.value; newCategoryName.value = ''; newCategoryEmoji.value = '✨'; newCategoryColor.value = 'F4E1E6'; showAddCategory.value = false
-  } catch (error) { console.error('Ошибка создания категории:', error) }
+    if (editingCategoryId.value) {
+      // Обновляем существующую
+      await updateDoc(doc(db, 'categories', editingCategoryId.value), {
+        name: newCategoryName.value,
+        emoji: newCategoryEmoji.value,
+        colorHex: newCategoryColor.value
+      })
+      editingCategoryId.value = null
+    } else {
+      // Создаём новую
+      await addDoc(collection(db, 'categories'), { 
+        name: newCategoryName.value, 
+        emoji: newCategoryEmoji.value, 
+        colorHex: newCategoryColor.value, 
+        isHidden: false, 
+        userId: user.value.uid 
+      })
+    }
+    newCategory.value = newCategoryName.value
+    newCategoryName.value = ''
+    newCategoryEmoji.value = '✨'
+    newCategoryColor.value = 'F4E1E6'
+    showAddCategory.value = false
+  } catch (error) { console.error('Ошибка сохранения категории:', error) }
+}
+
+function openEditCategory(cat) {
+  editingCategoryId.value = cat.id
+  newCategoryName.value = cat.name
+  newCategoryEmoji.value = cat.emoji
+  newCategoryColor.value = cat.colorHex
+  showAddCategory.value = true
+}
+
+const toggleCategoryArchive = async (cat) => {
+  try {
+    await updateDoc(doc(db, 'categories', cat.id), { isHidden: !cat.isHidden })
+  } catch (error) { console.error('Ошибка архивации категории:', error) }
 }
 
 function openEditWallet(wallet) {
